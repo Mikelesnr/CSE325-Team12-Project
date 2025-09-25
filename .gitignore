@@ -1,0 +1,43 @@
+# Build results
+bin/
+obj/
+
+# User-specific files
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# IDE / editor configs
+.vscode/
+.idea/
+
+# ASP.NET / Blazor publish output
+wwwroot/*.gz
+wwwroot/*.br
+
+# Logs
+*.log
+
+# NuGet
+*.nupkg
+*.snupkg
+*.nuspec
+packages/
+*.cache
+*.lock.json
+
+# Database (local dev dbs)
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment / secrets
+*.env
+secrets.json
+
+# Visual Studio
+.vs/
+
+# Resharper / Rider
+_ReSharper.Caches/
