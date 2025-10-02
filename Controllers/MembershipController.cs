@@ -1,40 +1,88 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using CSE325_Team12_Project.Models;
 using CSE325_Team12_Project.Data;
 
 namespace CSE325_Team12_Project.Controllers
 {
-    public class MembershipController : Controller
+    [ApiController]
+    [Route("api/[controller]")]
+    public class MembershipController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        public MembershipController(AppDbContext context) => _context = context;
+        private readonly ApplicationDbContext _context;
 
-        public IActionResult Index() => View(_context.Memberships.ToList());
-
-        public IActionResult Join(Guid userId, Guid troupeId)
+        public MembershipController(ApplicationDbContext context)
         {
-            var membership = new Membership
-            {
-                Id = Guid.NewGuid(),
-                UserId = userId,
-                TroupeId = troupeId,
-                JoinedAt = DateTime.UtcNow
-            };
-            _context.Memberships.Add(membership);
-            _context.SaveChanges();
-            return RedirectToAction("Index");
+            _context = context;
         }
 
-        public IActionResult Leave(Guid userId, Guid troupeId)
+        // GET: api/membership
+        [HttpGet]
+        [Authorize]
+        public async Task<IActionResult> GetAll()
         {
-            var membership = _context.Memberships
-                .FirstOrDefault(m => m.UserId == userId && m.TroupeId == troupeId);
-            if (membership != null)
+            var memberships = await _context.Memberships.ToListAsync();
+            return Ok(memberships);
+        }
+
+        // POST: api/membership/join
+        [HttpPost("join")]
+        [Authorize]
+        public async Task<IActionResult> Join([FromBody] MembershipRequest request)
+        {
+            try
             {
-                _context.Memberships.Remove(membership);
-                _context.SaveChanges();
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var membership = new Membership
+                {
+                    Id = Guid.NewGuid(),
+                    UserId = request.UserId,
+                    TroupeId = request.TroupeId,
+                    JoinedAt = DateTime.UtcNow
+                };
+
+                _context.Memberships.Add(membership);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Joined troupe successfully.", membership });
             }
-            return RedirectToAction("Index");
+            catch (Exception)
+            {
+                return StatusCode(500, new { message = "An error occurred while joining troupe." });
+            }
         }
+
+        // DELETE: api/membership/leave
+        [HttpDelete("leave")]
+        [Authorize]
+        public async Task<IActionResult> Leave([FromBody] MembershipRequest request)
+        {
+            try
+            {
+                var membership = await _context.Memberships
+                    .FirstOrDefaultAsync(m => m.UserId == request.UserId && m.TroupeId == request.TroupeId);
+
+                if (membership == null)
+                    return NotFound(new { message = "Membership not found." });
+
+                _context.Memberships.Remove(membership);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Left troupe successfully." });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { message = "An error occurred while leaving troupe." });
+            }
+        }
+    }
+
+    public class MembershipRequest
+    {
+        public Guid UserId { get; set; }
+        public Guid TroupeId { get; set; }
     }
 }

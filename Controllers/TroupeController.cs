@@ -1,46 +1,135 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using CSE325_Team12_Project.Models;
 using CSE325_Team12_Project.Data;
 
 namespace CSE325_Team12_Project.Controllers
 {
-    public class TroupeController : Controller
+    [ApiController]
+    [Route("api/[controller]")]
+    public class TroupeController : ControllerBase
     {
-        private readonly AppDbContext _context;
-        public TroupeController(AppDbContext context) => _context = context;
+        private readonly ApplicationDbContext _context;
 
-        public IActionResult Index() => View(_context.Troupes.ToList());
-
-        public IActionResult Create() => View();
-
-        [HttpPost]
-        public IActionResult Create(Troupe troupe)
+        public TroupeController(ApplicationDbContext context)
         {
-            troupe.CreatedAt = DateTime.UtcNow;
-            _context.Troupes.Add(troupe);
-            _context.SaveChanges();
-            return RedirectToAction("Index");
+            _context = context;
         }
 
-        public IActionResult Edit(Guid id) => View(_context.Troupes.Find(id));
-
-        [HttpPost]
-        public IActionResult Edit(Troupe troupe)
+        // GET: api/troupe
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
         {
-            _context.Troupes.Update(troupe);
-            _context.SaveChanges();
-            return RedirectToAction("Index");
+            var troupes = await _context.Troupes
+                .Include(t => t.CreatedBy)
+                .Include(t => t.Memberships)
+                .ToListAsync();
+
+            return Ok(troupes);
         }
 
-        public IActionResult Delete(Guid id)
+        // GET: api/troupe/{id}
+        [HttpGet("{id}")]
+        [Authorize]
+        public async Task<IActionResult> GetById(Guid id)
         {
-            var troupe = _context.Troupes.Find(id);
-            if (troupe != null)
+        var troupe = await _context.Troupes
+            .Include(t => t.CreatedBy)
+            .Include(t => t.Memberships)
+            .Include(t => t.Messages)
+            .FirstOrDefaultAsync(t => t.Id == id);
+
+        return troupe is null
+        ? NotFound(new { message = "Troupe not found." })
+        : Ok(troupe);
+}
+
+        // POST: api/troupe
+        [HttpPost]
+        [Authorize]
+        public async Task<IActionResult> Create([FromBody] TroupeRequest request)
+        {
+            try
             {
-                _context.Troupes.Remove(troupe);
-                _context.SaveChanges();
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                var troupe = new Troupe
+                {
+                    Id = Guid.NewGuid(),
+                    Name = request.Name,
+                    Description = request.Description,
+                    Visibility = request.Visibility,
+                    CreatedById = request.CreatedById,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                _context.Troupes.Add(troupe);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Troupe created successfully.", troupe });
             }
-            return RedirectToAction("Index");
+            catch (Exception)
+            {
+                return StatusCode(500, new { message = "An error occurred while creating the troupe." });
+            }
         }
+
+        // PUT: api/troupe/{id}
+        [HttpPut("{id}")]
+        [Authorize]
+        public async Task<IActionResult> Edit(Guid id, [FromBody] TroupeRequest request)
+        {
+            try
+            {
+                var troupe = await _context.Troupes.FindAsync(id);
+                if (troupe == null)
+                    return NotFound(new { message = "Troupe not found." });
+
+                troupe.Name = request.Name;
+                troupe.Description = request.Description;
+                troupe.Visibility = request.Visibility;
+
+                _context.Troupes.Update(troupe);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Troupe updated successfully.", troupe });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { message = "An error occurred while updating the troupe." });
+            }
+        }
+
+        // DELETE: api/troupe/{id}
+        [HttpDelete("{id}")]
+        [Authorize]
+        public async Task<IActionResult> Delete(Guid id)
+        {
+            try
+            {
+                var troupe = await _context.Troupes.FindAsync(id);
+                if (troupe == null)
+                    return NotFound(new { message = "Troupe not found." });
+
+                _context.Troupes.Remove(troupe);
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Troupe deleted successfully." });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, new { message = "An error occurred while deleting the troupe." });
+            }
+        }
+    }
+
+    public class TroupeRequest
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public TroupeVisibility Visibility { get; set; } = TroupeVisibility.Public;
+        public Guid CreatedById { get; set; }
     }
 }
