@@ -1,0 +1,78 @@
+@page "/chat"
+@using CSE325_Team12_Project.Services
+@inject ChatService ChatService
+@inject NavigationManager NavManager
+
+<h3>Two-User Chat Simulation</h3>
+
+<div style="display: flex; gap: 40px;">
+    <!-- Michael's Chat Box -->
+    <div style="flex: 1; border: 1px solid #ccc; padding: 10px;">
+        <h4>Michael</h4>
+        <ul>
+            @foreach (var msg in messages.Where(m => m.recipient == "Michael"))
+            {
+                <li><b>@msg.sender:</b> @msg.text</li>
+            }
+        </ul>
+        <input @bind="michaelMessage" placeholder="Message to Ester" />
+        <button @onclick="SendFromMichael">Send</button>
+    </div>
+
+    <!-- Ester's Chat Box -->
+    <div style="flex: 1; border: 1px solid #ccc; padding: 10px;">
+        <h4>Ester</h4>
+        <ul>
+            @foreach (var msg in messages.Where(m => m.recipient == "Ester"))
+            {
+                <li><b>@msg.sender:</b> @msg.text</li>
+            }
+        </ul>
+        <input @bind="esterMessage" placeholder="Message to Michael" />
+        <button @onclick="SendFromEster">Send</button>
+    </div>
+</div>
+
+@code {
+    // Message model with sender and recipient
+    private List<(string sender, string recipient, string text)> messages = new();
+
+    private string michaelMessage = "";
+    private string esterMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Skip SignalR connection during server-side prerendering
+        if (NavManager.Uri.StartsWith("file:", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        ChatService.OnMessageReceived += (sender, text) =>
+        {
+            var recipient = sender == "Michael" ? "Ester" : "Michael";
+            messages.Add((sender, recipient, text));
+            StateHasChanged();
+        };
+
+        await ChatService.StartAsync();
+    }
+
+    private async Task SendFromMichael()
+    {
+        if (!string.IsNullOrWhiteSpace(michaelMessage))
+        {
+            await ChatService.SendMessageAsync("Michael", michaelMessage);
+            michaelMessage = "";
+        }
+    }
+
+    private async Task SendFromEster()
+    {
+        if (!string.IsNullOrWhiteSpace(esterMessage))
+        {
+            await ChatService.SendMessageAsync("Ester", esterMessage);
+            esterMessage = "";
+        }
+    }
+}
