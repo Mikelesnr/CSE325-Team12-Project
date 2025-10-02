@@ -73,7 +73,7 @@
         // This would be handled by a proper authentication service
     }
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
         // Check authentication status
         // In a full implementation, this would check for a valid JWT token

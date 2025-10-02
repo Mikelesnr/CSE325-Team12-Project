@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Authorization;
 using CSE325_Team12_Project.Models;
 using CSE325_Team12_Project.Services;
 
@@ -16,6 +17,7 @@ namespace CSE325_Team12_Project.Controllers
         }
 
         [HttpPost("register")]
+        [AllowAnonymous]
         public async Task<IActionResult> Register([FromBody] RegisterRequest request)
         {
             try
@@ -33,13 +35,14 @@ namespace CSE325_Team12_Project.Controllers
             {
                 return BadRequest(new { message = ex.Message });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, new { message = "An error occurred during registration." });
             }
         }
 
         [HttpPost("login")]
+        [AllowAnonymous]
         public async Task<IActionResult> Login([FromBody] LoginRequest request)
         {
             try
@@ -58,13 +61,14 @@ namespace CSE325_Team12_Project.Controllers
 
                 return Ok(new { token });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, new { message = "An error occurred during login." });
             }
         }
 
         [HttpPost("logout")]
+        [AllowAnonymous]
         public IActionResult Logout()
         {
             // For JWT tokens, logout is handled client-side by removing the token
@@ -99,7 +103,7 @@ namespace CSE325_Team12_Project.Controllers
                     createdAt = user.CreatedAt
                 });
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return StatusCode(500, new { message = "An error occurred while fetching user information." });
             }

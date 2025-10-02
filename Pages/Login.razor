@@ -1,7 +1,7 @@
 @page "/login"
 @using System.ComponentModel.DataAnnotations
 @using Microsoft.AspNetCore.Components.Authorization
-@inject HttpClient Http
+@using System.Net.Http
 @inject NavigationManager Navigation
 
 <PageTitle>Login - Troupe Chat</PageTitle>
@@ -16,38 +16,41 @@
                 <div class="card-body">
                     <EditForm Model="@loginModel" OnValidSubmit="@HandleLogin">
                         <DataAnnotationsValidator />
-                        
+
                         <div class="mb-3">
                             <label for="email" class="form-label">Email</label>
-                            <InputText id="email" type="email" class="form-control" @bind-Value="loginModel.Email" placeholder="Enter your email" />
+                            <InputText id="email" type="email" class="form-control" @bind-Value="loginModel.Email"
+                                placeholder="Enter your email" />
                             <ValidationMessage For="@(() => loginModel.Email)" class="text-danger" />
                         </div>
 
                         <div class="mb-3">
                             <label for="password" class="form-label">Password</label>
-                            <InputText id="password" type="password" class="form-control" @bind-Value="loginModel.Password" placeholder="Enter your password" />
+                            <InputText id="password" type="password" class="form-control"
+                                @bind-Value="loginModel.Password" placeholder="Enter your password" />
                             <ValidationMessage For="@(() => loginModel.Password)" class="text-danger" />
                         </div>
 
                         @if (!string.IsNullOrEmpty(errorMessage))
                         {
-                                <div class="alert alert-danger" role="alert">
-                                    @errorMessage
-                                </div>
+                            <div class="alert alert-danger" role="alert">
+                                @errorMessage
+                            </div>
                         }
 
                         @if (!string.IsNullOrEmpty(successMessage))
                         {
-                                <div class="alert alert-success" role="alert">
-                                    @successMessage
-                                </div>
+                            <div class="alert alert-success" role="alert">
+                                @successMessage
+                            </div>
                         }
 
                         <div class="d-grid">
                             <button type="submit" class="btn btn-primary" disabled="@isLoading">
                                 @if (isLoading)
                                 {
-                                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                                    <span class="spinner-border spinner-border-sm me-2" role="status"
+                                        aria-hidden="true"></span>
                                 }
                                 Sign In
                             </button>
@@ -56,7 +59,7 @@
 
                     <div class="text-center mt-3">
                         <p class="mb-0">
-                            Don't have an account? 
+                            Don't have an account?
                             <a href="/register" class="text-decoration-none">Create one here</a>
                         </p>
                     </div>
@@ -71,6 +74,12 @@
     private bool isLoading = false;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
+    private HttpClient httpClient = new HttpClient();
+
+    protected override void OnInitialized()
+    {
+        httpClient.BaseAddress = new Uri(Navigation.BaseUri);
+    }
 
     private async Task HandleLogin()
     {
@@ -80,23 +89,13 @@
 
         try
         {
-            var response = await Http.PostAsJsonAsync("/api/auth/login", loginModel);
+            var response = await httpClient.PostAsJsonAsync("/api/auth/login", loginModel);
 
             if (response.IsSuccessStatusCode)
             {
-                var result = await response.Content.ReadFromJsonAsync<LoginResponse>();
-                if (result?.Token != null)
-                {
-                    // Store token in localStorage
-                    await Http.PostAsync("/api/auth/store-token", new StringContent(result.Token));
-                    successMessage = "Login successful! Redirecting...";
-                    await Task.Delay(1000);
-                    Navigation.NavigateTo("/");
-                }
-                else
-                {
-                    errorMessage = "Invalid response from server.";
-                }
+                successMessage = "Login successful! Redirecting...";
+                await Task.Delay(1000);
+                Navigation.NavigateTo("/");
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {
@@ -107,7 +106,7 @@
                 errorMessage = "Login failed. Please try again.";
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             errorMessage = "An error occurred during login. Please try again.";
         }
