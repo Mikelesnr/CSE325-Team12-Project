@@ -78,6 +78,7 @@
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
     private HttpClient httpClient = new HttpClient();
+    @inject IJSRuntime JS
 
     protected override void OnInitialized()
     {
@@ -96,9 +97,19 @@
 
             if (response.IsSuccessStatusCode)
             {
-                successMessage = "Login successful! Redirecting...";
-                await Task.Delay(1000);
-                Navigation.NavigateTo("/");
+                var loginResult = await response.Content.ReadFromJsonAsync<LoginResponse>();
+                if (loginResult != null && !string.IsNullOrEmpty(loginResult.Token))
+                {
+                    await JS.InvokeVoidAsync("localStorage.setItem", "authToken", loginResult.Token);
+                    successMessage = "Login successful! Redirecting...";
+                    await Task.Delay(1000);
+                    Navigation.NavigateTo("/chats");
+                }
+                else
+                {
+                    errorMessage = "Login failed. No token received.";
+                }
+
             }
             else if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
             {

@@ -1,0 +1,12 @@
+@page "/chats"
+@inject AuthStateService AuthState
+@inject NavigationManager Navigation
+
+@code {
+    private bool _checkedAuth = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        _checkedAuth = await AuthState.CheckAndRedirectIfNotAuthenticatedAsync(Navigation, _checkedAuth);
+    }
+}
