@@ -1,57 +1,62 @@
 ﻿@page "/"
+@layout LadingLayout
 
 <PageTitle>Welcome - Troupe Chat</PageTitle>
 
-<div class="hero-section text-center py-5">
-    <div class="container">
-        <h1 class="display-4 fw-bold text-primary mb-4">Welcome to Troupe Chat</h1>
-        <p class="lead mb-4">Connect with like-minded learners and creators through vibrant, interest-based communities.
-        </p>
+<div class="hero-section text-center padding-hero">
+    <div class="container content">
+        <div>
+            <img src="images/Logo.png" width="350" class="logo-img"/>
+            <h1 class="display-4 fw-bold mb-4 titles">Welcome to Troupe Chat</h1>
+            <p class="lead mb-4 tagline">Connect with like-minded learners and creators through vibrant, interest-based communities.
+            </p>
+        </div>
 
+
+        <div class="buttons-div">
+            <a href="/register" class="btn btn-primary btn-lg me-3 button-primary">Get Started</a>
+            <a href="/login" class="btn btn-outline-primary btn-lg button-secondary">Sign In</a>
+        </div>
+        
         <div class="row mt-5">
             <div class="col-md-4 mb-4">
-                <div class="card h-100">
+                <div class="card h-100 box-shadow">
                     <div class="card-body text-center">
                         <div class="feature-icon mb-3">
-                            <span class="oi oi-people display-4 text-primary"></span>
+                            <img src="images/Troupes.svg" width="150" height="132"/>
                         </div>
-                        <h5 class="card-title">Join Troupes</h5>
-                        <p class="card-text">Discover and join communities around your interests - from anime to
+                        <h5 class="card-title titles">Join Troupes</h5>
+                        <p class="card-text text-card">Discover and join communities around your interests - from anime to
                             programming to fitness.</p>
                     </div>
                 </div>
             </div>
 
             <div class="col-md-4 mb-4">
-                <div class="card h-100">
+                <div class="card h-100 box-shadow">
                     <div class="card-body text-center">
                         <div class="feature-icon mb-3">
-                            <span class="oi oi-chat display-4 text-primary"></span>
+                            <img src="images/Chat.svg" width="150" height="132"/>
                         </div>
-                        <h5 class="card-title">Real-time Messaging</h5>
-                        <p class="card-text">Chat instantly with group members or start private conversations with other
+                        <h5 class="card-title titles">Real-time Messaging</h5>
+                        <p class="card-text text-card">Chat instantly with group members or start private conversations with other
                             users.</p>
                     </div>
                 </div>
             </div>
 
             <div class="col-md-4 mb-4">
-                <div class="card h-100">
+                <div class="card h-100 box-shadow">
                     <div class="card-body text-center">
                         <div class="feature-icon mb-3">
-                            <span class="oi oi-plus display-4 text-primary"></span>
+                            <img src="images/CreateTroupes.svg" width="150" height="132">
                         </div>
-                        <h5 class="card-title">Create Communities</h5>
-                        <p class="card-text">Start your own troupe and build a community around your passion or project.
+                        <h5 class="card-title titles">Create Communities</h5>
+                        <p class="card-text text-card">Start your own troupe and build a community around your passion or project.
                         </p>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div class="mt-5">
-            <a href="/register" class="btn btn-primary btn-lg me-3">Get Started</a>
-            <a href="/login" class="btn btn-outline-primary btn-lg">Sign In</a>
         </div>
     </div>
 </div>
