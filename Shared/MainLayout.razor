@@ -1,15 +1,26 @@
 ﻿@inherits LayoutComponentBase
 
-<PageTitle>Troupe Chat</PageTitle>
 
 <div class="page">
-    <div class="sidebar">
+    <div class="overlay @(isSidebarOpen ? "active" : "")" @onclick="CloseSidebar"></div>    
+    <div class="sidebar  @(isSidebarOpen ? "open" : "closed")">
+        
+       
         <NavMenu />
     </div>
 
     <main>
         <div class="top-row px-4">
-            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+            <button class="HamButton hamTopButtom" @onclick="ToggleSidebar">&#9776</button>
+            <div class="top-nav">
+                <a href="#" @onclick:preventDefault="true">
+                    <img src="images/Notification.svg" alt="Logo" height="35px"/>
+                </a>
+                <Button Variant="ButtonVariant.Secondary" Size="ButtonSize.Small" >
+                    Log out
+                </Button>
+            </div>
+
         </div>
 
         <article class="content px-4">
@@ -17,3 +28,10 @@
         </article>
     </main>
 </div>
+@code {
+    private bool isSidebarOpen = false;
+
+    private void ToggleSidebar() => isSidebarOpen = !isSidebarOpen;
+
+    private void CloseSidebar(Microsoft.AspNetCore.Components.Web.MouseEventArgs e) => isSidebarOpen = false;
+}

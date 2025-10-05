@@ -1,0 +1,45 @@
+@namespace Project.Components
+
+<button class="@CssClasses" @onclick="OnClick" disabled="@Disabled">
+    @ChildContent
+</button>
+
+@code {
+    [Parameter]
+    public EventCallback OnClick { get; set; }
+
+    [Parameter]
+    public ButtonVariant Variant { get; set; } = ButtonVariant.Primary;
+
+    [Parameter]
+    public ButtonSize Size { get; set; } = ButtonSize.Medium;
+
+    [Parameter]
+    public bool Disabled { get; set; } = false;
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    // NUEVO: Clases CSS adicionales
+    [Parameter]
+    public string? AdditionalClasses { get; set; }
+
+    private string CssClasses => $"btn {VariantClass} {SizeClass} {AdditionalClasses}".Trim();
+
+    private string VariantClass => Variant switch
+    {
+        ButtonVariant.Primary => "btn-primary",
+        ButtonVariant.Secondary => "btn-secondary",
+        ButtonVariant.Empty => "btn-empty",
+        ButtonVariant.Danger => "btn-danger",
+        _ => "btn-primary"
+    };
+
+    private string SizeClass => Size switch
+    {
+        ButtonSize.Small => "btn-small",
+        ButtonSize.Medium => "btn-medium",
+        ButtonSize.Large => "btn-large",
+        _ => "btn-medium"
+    };
+}

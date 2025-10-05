@@ -2,8 +2,26 @@
 @inject AuthStateService AuthState
 @inject NavigationManager Navigation
 
+
+<Button Variant="ButtonVariant.Primary" Size="ButtonSize.Medium" OnClick="HandleClick">
+    Primary
+</Button>
+
+<Button Variant="ButtonVariant.Secondary" Size="ButtonSize.Medium" OnClick="HandleClick">
+    Secondary
+</Button>
+
+<Button Variant="ButtonVariant.Danger" Size="ButtonSize.Large" >
+    Danger
+</Button>
+
 @code {
     private bool _checkedAuth = false;
+
+    private void HandleClick()
+    {
+        // TODO: Add button click logic here
+    }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

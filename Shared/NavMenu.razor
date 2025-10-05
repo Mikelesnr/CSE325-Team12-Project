@@ -1,82 +1,29 @@
-﻿<div class="top-row ps-3 navbar navbar-dark">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="">Troupe Chat</a>
-        <button title="Navigation menu" class="navbar-toggler" @onclick="ToggleNavMenu">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-    </div>
-</div>
+﻿<div>
 
-<div class="@NavMenuCssClass nav-scrollable" @onclick="ToggleNavMenu">
-    <nav class="flex-column">
-        <div class="nav-item px-3">
-            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                <span class="oi oi-home" aria-hidden="true"></span> Home
-            </NavLink>
+    <div class="logo">
+        <img src="images/Logo.png" alt="Logo" height="80px"/>
+    </div>
+
+    <div class="nav-links">
+        <div class="nav-item"> 
+            <a href="/chats" class="link">
+                <img src="images/Chat-icon.svg" alt="Chat Icon" height="45px" width="45px"/>
+                <p>Chats</p>
+            </a>
         </div>
 
-        @if (isAuthenticated)
-        {
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="troupes">
-                    <span class="oi oi-people" aria-hidden="true"></span> Troupes
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="messages">
-                    <span class="oi oi-chat" aria-hidden="true"></span> Messages
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="profile">
-                    <span class="oi oi-person" aria-hidden="true"></span> Profile
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <a class="nav-link" href="#" @onclick="HandleLogout">
-                    <span class="oi oi-account-logout" aria-hidden="true"></span> Logout
-                </a>
-            </div>
-        }
-        else
-        {
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="login">
-                    <span class="oi oi-account-login" aria-hidden="true"></span> Login
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="register">
-                    <span class="oi oi-plus" aria-hidden="true"></span> Register
-                </NavLink>
-            </div>
-        }
-    </nav>
+        <div class="nav-item">
+            <a href="/troupes" class="link">
+                <img src="images/Troupes-icon.svg" alt="Troupes Icon" height="45px" width="45px"/>
+                <p>Troupes</p>
+            </a>
+        </div>
+        <div class="nav-item">
+            <a href="/settings" class="link">
+                <img src="images/Settings-icons.svg" alt="Settings Icon" height="45px" width="45px"/>
+                <p>Settings</p>
+            </a>
+        </div>  
+    </div>
+
 </div>
-
-@code {
-    private bool collapseNavMenu = true;
-    private bool isAuthenticated = false;
-
-    private string? NavMenuCssClass => collapseNavMenu ? "collapse" : null;
-
-    private void ToggleNavMenu()
-    {
-        collapseNavMenu = !collapseNavMenu;
-    }
-
-    private async Task HandleLogout()
-    {
-        // For now, just redirect to home page
-        // In a full implementation, you'd clear the JWT token
-        await Task.Delay(100);
-        // This would be handled by a proper authentication service
-    }
-
-    protected override void OnInitialized()
-    {
-        // Check authentication status
-        // In a full implementation, this would check for a valid JWT token
-        isAuthenticated = false; // Placeholder
-    }
-}
