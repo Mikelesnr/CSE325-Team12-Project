@@ -3,10 +3,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using CSE325_Team12_Project.Data;
 using CSE325_Team12_Project.Models;
-
-//The "Conversation" and "ConversationParticipant" will show a "notFound Error" because
-// the "ConversationModel" has not been created yet, it should get solved by itself once
-// "ConversationModel" is created (delete this comment after creating the Model)
+using CSE325_Team12_Project.Services;
 
 namespace CSE325_Team12_Project.Controllers
 {
@@ -15,10 +12,12 @@ namespace CSE325_Team12_Project.Controllers
     public class ConversationsController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IConversationService _conversationService;
 
-        public ConversationsController(ApplicationDbContext context)
+        public ConversationsController(ApplicationDbContext context, IConversationService conversationService)
         {
             _context = context;
+            _conversationService = conversationService;
         }
 
         /// <summary>
@@ -30,27 +29,23 @@ namespace CSE325_Team12_Project.Controllers
         {
             try
             {
-                if (request.UserIds == null || request.UserIds.Count < 2)
-                {
-                    return BadRequest(new { message = "A conversation requires at least two users." });
-                }
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var currentUserId))
+                    return Unauthorized();
 
-                // Create new conversation
-                var conversation = new Conversation
-                {
-                    Id = Guid.NewGuid(),
-                    CreatedAt = DateTime.UtcNow,
-                    Participants = request.UserIds.Select(uid => new ConversationParticipant
-                    {
-                        Id = Guid.NewGuid(),
-                        UserId = uid,
-                        JoinedAt = DateTime.UtcNow
-                    }).ToList()
-                };
+                if (request.UserIds == null || request.UserIds.Count == 0)
+                    return BadRequest(new { message = "You must select a participant." });
 
-                _context.Conversations.Add(conversation);
-                await _context.SaveChangesAsync();
+                // Ensure the current user is included
+                if (!request.UserIds.Contains(currentUserId))
+                    request.UserIds.Add(currentUserId);
 
+                // Ensure exactly two distinct users
+                request.UserIds = request.UserIds.Distinct().ToList();
+                if (request.UserIds.Count != 2)
+                    return BadRequest(new { message = "A conversation must include exactly two distinct users." });
+
+                var conversation = await _conversationService.CreateConversationAsync(request.UserIds);
                 return Ok(new { conversation.Id });
             }
             catch (Exception)
@@ -106,9 +101,7 @@ namespace CSE325_Team12_Project.Controllers
             {
                 var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
-                {
                     return Unauthorized();
-                }
 
                 var conversations = await _context.ConversationParticipants
                     .Include(cp => cp.Conversation)
@@ -137,7 +130,6 @@ namespace CSE325_Team12_Project.Controllers
         }
     }
 
-    // Request DTO
     public class StartConversationRequest
     {
         public List<Guid> UserIds { get; set; } = new();

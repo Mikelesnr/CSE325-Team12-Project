@@ -1,0 +1,103 @@
+@page "/conversations/create"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject AuthClientService Auth
+
+<h3>Start a New Conversation</h3>
+
+@if (errorMessage != null)
+{
+    <p class="text-danger">@errorMessage</p>
+}
+
+<EditForm Model="@conversationRequest" OnValidSubmit="@StartConversation">
+    <DataAnnotationsValidator />
+    <ValidationSummary />
+
+    <label>Select a Participant:</label>
+    <InputSelect @bind-Value="conversationRequest.SelectedUserId">
+        <option value="">-- Select --</option>
+        @foreach (var user in users)
+        {
+            <option value="@user.Id.ToString()">@user.Name</option>
+        }
+    </InputSelect>
+
+    <button class="btn btn-primary mt-3" type="submit">Start Conversation</button>
+</EditForm>
+
+@code {
+    private ConversationForm conversationRequest = new();
+    private List<UserDto> users = new();
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var allUsers = await Http.GetFromJsonAsync<List<UserDto>>("api/user");
+            var currentUserId = Auth.CurrentUser?.Id;
+
+            users = allUsers?
+            .Where(u => u.Id != currentUserId)
+            .ToList() ?? new();
+        }
+        catch
+        {
+            errorMessage = "Failed to load users.";
+        }
+    }
+
+    private async Task StartConversation()
+    {
+        try
+        {
+            if (!Guid.TryParse(conversationRequest.SelectedUserId, out var otherUserId) || Auth.CurrentUser == null)
+            {
+                errorMessage = "Invalid participant selection.";
+                return;
+            }
+
+            var payload = new StartConversationRequest
+            {
+                UserIds = new List<Guid> { Auth.CurrentUser.Id, otherUserId }
+            };
+
+            var response = await Http.PostAsJsonAsync("api/conversations/start", payload);
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ConversationCreatedResponse>();
+                Navigation.NavigateTo($"/conversations/{result!.Id}");
+            }
+            else
+            {
+                errorMessage = "Failed to start conversation.";
+            }
+        }
+        catch
+        {
+            errorMessage = "An error occurred.";
+        }
+    }
+
+    public class ConversationForm
+    {
+        public string SelectedUserId { get; set; } = string.Empty;
+    }
+
+    public class StartConversationRequest
+    {
+        public List<Guid> UserIds { get; set; } = new();
+    }
+
+    public class ConversationCreatedResponse
+    {
+        public Guid Id { get; set; }
+    }
+
+    public class UserDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+}
