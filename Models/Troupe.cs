@@ -24,6 +24,7 @@ namespace CSE325_Team12_Project.Models
 
         // Navigation properties
         public virtual User CreatedBy { get; set; } = null!;
+        public string? AvatarUrl { get; set; }
         public virtual ICollection<Membership> Memberships { get; set; } = new List<Membership>();
         public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
 

@@ -1,10 +1,19 @@
 .asidebar {
   background-color: var(--secondary-color);
-  max-width: 300px;
+  width: 250px;
   height: 100vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  display: hidden;
+}
+
+.visible {
+  display: flex;
+}
+
+.hidden {
+  display: none;
 }
 
 .button-container {
