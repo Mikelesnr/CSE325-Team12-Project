@@ -41,3 +41,9 @@ secrets.json
 
 # Resharper / Rider
 _ReSharper.Caches/
+
+.fake
+
+Dockerfile.ef
+
+CSE325-Team12-Project.csproj
