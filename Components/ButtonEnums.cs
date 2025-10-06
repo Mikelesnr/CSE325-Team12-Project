@@ -5,7 +5,7 @@ namespace CSE325_Team12_Project.Components
         Primary,
         Secondary,
         Danger,
-        Empty
+        SecondaryDanger
     }
 
     public enum ButtonSize

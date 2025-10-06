@@ -28,6 +28,17 @@
   color: white;
 }
 
+.btn-secondary-danger {
+  background-color: white;
+  color: #1b6ec2;
+  border: 1px solid #1b6ec2;
+}
+
+.btn-secondary-danger:hover {
+  background-color: #a71d2a;
+  color: white;
+}
+
 .btn-danger {
   background-color: #dc3545;
   color: white;

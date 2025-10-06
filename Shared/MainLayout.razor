@@ -16,7 +16,7 @@
                 <a href="#" @onclick:preventDefault="true">
                     <img src="images/Notification.svg" alt="Logo" height="35px"/>
                 </a>
-                <Button Variant="ButtonVariant.Secondary" Size="ButtonSize.Small" >
+                <Button Variant="ButtonVariant.SecondaryDanger" Size="ButtonSize.Small" OnClick="OnLogoutClick">
                     Log out
                 </Button>
             </div>
@@ -33,10 +33,19 @@
 
     </main>
 </div>
+@inject NavigationManager Navigation
+@inject AuthStateService AuthState
+
 @code {
     private bool isSidebarOpen = false;
 
     private void ToggleSidebar() => isSidebarOpen = !isSidebarOpen;
 
     private void CloseSidebar(Microsoft.AspNetCore.Components.Web.MouseEventArgs e) => isSidebarOpen = false;
+
+    private async Task OnLogoutClick()
+    {
+        await AuthState.LogoutAsync();
+        Navigation.NavigateTo("/login", true);
+    }
 }
