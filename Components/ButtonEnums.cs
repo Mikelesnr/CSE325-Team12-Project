@@ -1,4 +1,4 @@
-namespace Project.Components
+namespace CSE325_Team12_Project.Components
 {
     public enum ButtonVariant
     {
@@ -17,3 +17,6 @@ namespace Project.Components
 
     }
 }
+
+
+
