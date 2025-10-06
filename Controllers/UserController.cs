@@ -19,7 +19,7 @@ namespace CSE325_Team12_Project.Controllers
 
         // GET: api/user
         [HttpGet]
-        [Authorize]
+        // [Authorize]
         public async Task<IActionResult> GetAll()
         {
             var users = await _context.Users.ToListAsync();

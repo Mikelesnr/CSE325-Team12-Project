@@ -3,13 +3,46 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using CSE325_Team12_Project.Models;
 using CSE325_Team12_Project.Data;
+using CSE325_Team12_Project.Models.DTOs;
 
 namespace CSE325_Team12_Project.Controllers
 {
+
     [ApiController]
     [Route("api/[controller]")]
     public class TroupeController : ControllerBase
     {
+        private TroupeDto MapToDto(Troupe troupe)
+        {
+            return new TroupeDto
+            {
+                Id = troupe.Id,
+                Name = troupe.Name,
+                Description = troupe.Description,
+                Visibility = troupe.Visibility,
+                CreatedAt = troupe.CreatedAt,
+                CreatedBy = new UserDto
+                {
+                    Id = troupe.CreatedBy.Id,
+                    Name = troupe.CreatedBy.Name
+                },
+                Members = troupe.Memberships.Select(m => new MemberDto
+                {
+                    UserId = m.UserId,
+                    Name = m.User?.Name ?? "",
+                    Email = m.User?.Email ?? "",
+                    JoinedAt = m.JoinedAt
+                }).ToList(),
+                Messages = troupe.Messages.Select(msg => new MessageDto
+                {
+                    Id = msg.Id,
+                    SenderId = msg.SenderId,
+                    Content = msg.Content,
+                    CreatedAt = msg.CreatedAt
+                }).ToList()
+            };
+        }
+
         private readonly ApplicationDbContext _context;
 
         public TroupeController(ApplicationDbContext context)
@@ -26,24 +59,27 @@ namespace CSE325_Team12_Project.Controllers
                 .Include(t => t.Memberships)
                 .ToListAsync();
 
-            return Ok(troupes);
+            var dtoList = troupes.Select(MapToDto).ToList();
+            return Ok(dtoList);
         }
 
         // GET: api/troupe/{id}
         [HttpGet("{id}")]
-        [Authorize]
+        // [Authorize]
         public async Task<IActionResult> GetById(Guid id)
         {
-        var troupe = await _context.Troupes
-            .Include(t => t.CreatedBy)
-            .Include(t => t.Memberships)
-            .Include(t => t.Messages)
-            .FirstOrDefaultAsync(t => t.Id == id);
+            var troupe = await _context.Troupes
+                .Include(t => t.CreatedBy)
+                .Include(t => t.Memberships)
+                .Include(t => t.Messages)
+                .FirstOrDefaultAsync(t => t.Id == id);
 
-        return troupe is null
-        ? NotFound(new { message = "Troupe not found." })
-        : Ok(troupe);
-}
+            if (troupe is null)
+                return NotFound(new { message = "Troupe not found." });
+
+            var dto = MapToDto(troupe);
+            return Ok(dto);
+        }
 
         // POST: api/troupe
         [HttpPost]

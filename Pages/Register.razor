@@ -1,9 +1,8 @@
 @page "/register"
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.AspNetCore.Components.Authorization
-@using System.Net.Http
 @inject NavigationManager Navigation
 @layout LadingLayout
+@inject AuthClientService Auth
 
 <PageTitle>Register - Troupe Chat</PageTitle>
 
@@ -48,16 +47,12 @@
 
                         @if (!string.IsNullOrEmpty(errorMessage))
                         {
-                            <div class="alert alert-danger" role="alert">
-                                @errorMessage
-                            </div>
+                            <div class="alert alert-danger" role="alert">@errorMessage</div>
                         }
 
                         @if (!string.IsNullOrEmpty(successMessage))
                         {
-                            <div class="alert alert-success" role="alert">
-                                @successMessage
-                            </div>
+                            <div class="alert alert-success" role="alert">@successMessage</div>
                         }
 
                         <div class="d-grid">
@@ -89,12 +84,6 @@
     private bool isLoading = false;
     private string errorMessage = string.Empty;
     private string successMessage = string.Empty;
-    private HttpClient httpClient = new HttpClient();
-
-    protected override void OnInitialized()
-    {
-        httpClient.BaseAddress = new Uri(Navigation.BaseUri);
-    }
 
     private async Task HandleRegister()
     {
@@ -102,30 +91,20 @@
         errorMessage = string.Empty;
         successMessage = string.Empty;
 
-        try
-        {
-            var response = await httpClient.PostAsJsonAsync("/api/auth/register", registerModel);
+        var success = await Auth.RegisterAsync(registerModel.Name, registerModel.Email, registerModel.Password);
 
-            if (response.IsSuccessStatusCode)
-            {
-                successMessage = "Account created successfully! Redirecting to login...";
-                await Task.Delay(2000);
-                Navigation.NavigateTo("/login");
-            }
-            else
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                errorMessage = "Registration failed. Please try again.";
-            }
-        }
-        catch (Exception)
+        if (success && Auth.IsAuthenticated)
         {
-            errorMessage = "An error occurred during registration. Please try again.";
+            successMessage = $"Welcome, {Auth.CurrentUser?.Name}!";
+            await Task.Delay(1500);
+            Navigation.NavigateTo("/");
         }
-        finally
+        else
         {
-            isLoading = false;
+            errorMessage = "Registration failed. Please try again.";
         }
+
+        isLoading = false;
     }
 
     public class RegisterModel

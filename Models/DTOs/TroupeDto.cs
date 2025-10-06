@@ -11,12 +11,13 @@ namespace CSE325_Team12_Project.Models.DTOs
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
         public TroupeVisibility Visibility { get; set; }
-        public Guid CreatedById { get; set; }
         public DateTime CreatedAt { get; set; }
 
         public string? AvatarUrl { get; set; }
 
+        public UserDto CreatedBy { get; set; } = new();
         public List<MemberDto> Members { get; set; } = new();
         public List<MessageDto> Messages { get; set; } = new();
     }
+
 }
