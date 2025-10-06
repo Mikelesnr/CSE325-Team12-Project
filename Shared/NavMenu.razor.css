@@ -25,8 +25,15 @@
 
 .nav-item {
   width: 100%;
+  padding: 10px 0;
 }
 
 .nav-item:hover {
+  background-color: rgb(240, 235, 235);
+}
+
+.active {
   background-color: var(--contrast-color);
+  box-shadow: 3px 6px 25px -5px rgba(0, 0, 0, 0.1),
+    -2px -8px 10px -5px rgba(0, 0, 0, 0.04);
 }
