@@ -20,6 +20,7 @@ if (string.IsNullOrWhiteSpace(jwtKey) || string.IsNullOrWhiteSpace(jwtIssuer) ||
 }
 
 // Add services to the container.
+builder.Services.AddScoped<AuthStateService>();
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddControllers().AddJsonOptions(options =>

@@ -1,19 +1,51 @@
 ﻿@inherits LayoutComponentBase
 
-<PageTitle>Troupe Chat</PageTitle>
 
 <div class="page">
-    <div class="sidebar">
+    <div class="overlay @(isSidebarOpen ? "active" : "")" @onclick="CloseSidebar"></div>    
+    <div class="sidebar  @(isSidebarOpen ? "open" : "closed")">
+        
+       
         <NavMenu />
     </div>
 
     <main>
         <div class="top-row px-4">
-            <a href="https://docs.microsoft.com/aspnet/" target="_blank">About</a>
+            <button class="HamButton hamTopButtom" @onclick="ToggleSidebar">&#9776</button>
+            <div class="top-nav">
+                <a href="#" @onclick:preventDefault="true">
+                    <img src="images/Notification.svg" alt="Logo" height="35px"/>
+                </a>
+                <Button Variant="ButtonVariant.SecondaryDanger" Size="ButtonSize.Small" OnClick="OnLogoutClick">
+                    Log out
+                </Button>
+            </div>
+
         </div>
 
-        <article class="content px-4">
-            @Body
-        </article>
+        <div class="main-content">
+            <AsideBar />
+            <div class="">
+                @Body
+            </div>
+        </div>
+
+
     </main>
 </div>
+@inject NavigationManager Navigation
+@inject AuthStateService AuthState
+
+@code {
+    private bool isSidebarOpen = false;
+
+    private void ToggleSidebar() => isSidebarOpen = !isSidebarOpen;
+
+    private void CloseSidebar(Microsoft.AspNetCore.Components.Web.MouseEventArgs e) => isSidebarOpen = false;
+
+    private async Task OnLogoutClick()
+    {
+        await AuthState.LogoutAsync();
+        Navigation.NavigateTo("/login", true);
+    }
+}

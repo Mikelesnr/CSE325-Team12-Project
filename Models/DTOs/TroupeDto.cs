@@ -13,6 +13,8 @@ namespace CSE325_Team12_Project.Models.DTOs
         public TroupeVisibility Visibility { get; set; }
         public DateTime CreatedAt { get; set; }
 
+        public string? AvatarUrl { get; set; }
+
         public UserDto CreatedBy { get; set; } = new();
         public List<MemberDto> Members { get; set; } = new();
         public List<MessageDto> Messages { get; set; } = new();
