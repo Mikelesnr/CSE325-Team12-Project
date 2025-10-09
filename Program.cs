@@ -6,6 +6,7 @@ using CSE325_Team12_Project.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Blazored.LocalStorage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,6 +57,8 @@ builder.Services.AddSwaggerGen(options =>
         }
     });
 });
+builder.Services.AddBlazoredLocalStorage();
+
 
 builder.Services.AddScoped<IConversationService, ConversationService>();
 // Add Entity Framework

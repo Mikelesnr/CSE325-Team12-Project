@@ -1,1 +1,76 @@
 @page "/troupes"
+@inject AuthClientService AuthClient
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<h3 class="page-title">🎭 My Troupes</h3>
+
+@if (!ready)
+{
+    <p class="loading-text">Loading your troupes...</p>
+}
+else if (troupes == null || troupes.Count == 0)
+{
+    <p class="empty-text">You’re not a member of any troupes yet.</p>
+}
+else
+{
+    <div class="troupe-grid">
+        @foreach (var troupe in troupes)
+        {
+            <div class="troupe-card">
+                <div class="troupe-info">
+                    <h5>@troupe.Name</h5>
+                    <button class="open-button" @onclick="() => NavigateToTroupe(troupe.Id)">View</button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<TroupeDto>? troupes;
+    private bool hasRendered = false;
+    private bool ready = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasRendered)
+        {
+            hasRendered = true;
+
+            var restored = await AuthClient.RestoreSessionAsync();
+            if (!restored || AuthClient.CurrentUser == null)
+            {
+                Console.WriteLine("❌ Unable to restore session.");
+                ready = true;
+                StateHasChanged();
+                return;
+            }
+
+            try
+            {
+                troupes = await Http.GetFromJsonAsync<List<TroupeDto>>("/api/membership/mine");
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"❌ Failed to load troupes: {ex.Message}");
+                troupes = new();
+            }
+
+            ready = true;
+            StateHasChanged();
+        }
+    }
+
+    private void NavigateToTroupe(Guid id)
+    {
+        Navigation.NavigateTo($"/troupes/@id");
+    }
+
+    public class TroupeDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+    }
+}

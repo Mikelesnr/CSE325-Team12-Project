@@ -1,7 +1,7 @@
-@using CSE325_Team12_Project.Models
+@using CSE325_Team12_Project.Models.DTOs
 @inject NavigationManager NavigationManager
-
-
+@inject HttpClient Http
+@inject AuthClientService AuthClient
 
 <aside class="asidebar @(Settings)">
     <div class="button-container">
@@ -15,13 +15,13 @@
         <div class="direct-messages">
             @if (IsChatsPage)
             {
-                @foreach (var user in DirectMessages)
+                @foreach (var participant in DirectParticipants)
                 {
                     <div class="message">
                         <div class="profile-image">
-                            <img src="@user.AvatarUrl" alt="Profile Icon" width="50px" />
+                            <img src="@GetAvatar(participant.AvatarUrl)" alt="Profile Icon" width="50px" />
                         </div>
-                        <p>@user.Name</p>
+                        <p>@participant.Name</p>
                     </div>
                 }
             }
@@ -31,7 +31,7 @@
                 {
                     <div class="message">
                         <div class="profile-image">
-                            <img src="@troupe.AvatarUrl" alt="Troupe Icon" width="50px" />
+                            <img src="@GetAvatar(troupe.AvatarUrl)" alt="Troupe Icon" width="50px" />
                         </div>
                         <p>@troupe.Name</p>
                     </div>
@@ -47,32 +47,84 @@
     private bool IsChatsPage => NavigationManager.Uri.Contains("/chats");
     private bool IsSettings => NavigationManager.Uri.Contains("/settings");
 
+    public List<ParticipantDto> DirectParticipants { get; private set; } = new();
+    public List<TroupeDto> Troupes { get; private set; } = new();
 
-    // Data Simulation, replace with your real services
-    private List<User> DirectMessages = new()
-    {
-        new User { Name = "Alice", AvatarUrl = "images/Profile.svg" },
-        new User { Name = "Bob", AvatarUrl = "images/Profile.svg" }
-    };
-
-    private List<Troupe> Troupes = new()
-    {
-        new Troupe { Name = "CSE325 Team", AvatarUrl = "images/Profile.svg" },
-        new Troupe { Name = "Chess Club", AvatarUrl = "images/Profile.svg" }
-    };
-
-        protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         NavigationManager.LocationChanged += OnLocationChanged;
+
+        if (!AuthClient.IsAuthenticated)
+        {
+            var restored = await AuthClient.RestoreSessionAsync();
+            if (!restored || AuthClient.CurrentUser == null)
+            {
+                Console.WriteLine("❌ Unable to restore session.");
+                return;
+            }
+        }
+
+        await LoadSidebarData();
+    }
+
+    private async Task LoadSidebarData()
+    {
+        try
+        {
+            if (IsChatsPage)
+            {
+                var conversations = await Http.GetFromJsonAsync<List<ConversationDto>>("/api/conversations/mine");
+                var currentId = AuthClient.CurrentUser?.Id.ToString();
+
+                DirectParticipants = conversations?
+                    .SelectMany(c => c.Participants)
+                    .Where(p => p.UserId.ToString() != currentId)
+                    .GroupBy(p => p.UserId)
+                    .Select(g => g.First())
+                    .ToList() ?? new();
+            }
+            else
+            {
+                Troupes = await Http.GetFromJsonAsync<List<TroupeDto>>("/api/membership/mine") ?? new();
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"❌ Sidebar data load failed: {ex.Message}");
+        }
     }
 
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
-        StateHasChanged();
+        _ = LoadSidebarData(); // refresh sidebar on route change
     }
+
+    private string GetAvatar(string? url) => string.IsNullOrWhiteSpace(url) ? "images/Profile.svg" : url;
 
     public void Dispose()
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+
+    public class ConversationDto
+    {
+        public Guid Id { get; set; }
+        public List<ParticipantDto> Participants { get; set; } = new();
+    }
+
+    public class ParticipantDto
+    {
+        public Guid UserId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string AvatarUrl { get; set; } = string.Empty;
+    }
+
+    public class TroupeDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string AvatarUrl { get; set; } = string.Empty;
     }
 }
