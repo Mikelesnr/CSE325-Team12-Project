@@ -3,6 +3,7 @@ using System;
 using CSE325_Team12_Project.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CSE325_Team12_Project.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251009174541_AddMessagingModels")]
+    partial class AddMessagingModels
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
@@ -28,7 +31,7 @@ namespace CSE325_Team12_Project.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("datetime('now')");
 
-                    b.Property<Guid>("CreatedBy")
+                    b.Property<Guid>("CreatedById")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsGroup")
@@ -38,7 +41,7 @@ namespace CSE325_Team12_Project.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedBy");
+                    b.HasIndex("CreatedById");
 
                     b.ToTable("Conversations");
                 });
@@ -62,27 +65,12 @@ namespace CSE325_Team12_Project.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("ConversationId");
-
                     b.HasIndex("UserId");
 
+                    b.HasIndex("ConversationId", "UserId")
+                        .IsUnique();
+
                     b.ToTable("ConversationParticipants");
-                });
-
-            modelBuilder.Entity("CSE325_Team12_Project.Models.InterestTag", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("InterestTags");
                 });
 
             modelBuilder.Entity("CSE325_Team12_Project.Models.Membership", b =>
@@ -120,6 +108,7 @@ namespace CSE325_Team12_Project.Migrations
 
                     b.Property<string>("Content")
                         .IsRequired()
+                        .HasMaxLength(5000)
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ConversationId")
@@ -154,9 +143,6 @@ namespace CSE325_Team12_Project.Migrations
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AvatarUrl")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedAt")
@@ -229,37 +215,15 @@ namespace CSE325_Team12_Project.Migrations
                     b.ToTable("Users");
                 });
 
-            modelBuilder.Entity("CSE325_Team12_Project.Models.UserInterest", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("InterestTagId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("InterestTagId");
-
-                    b.HasIndex("UserId", "InterestTagId")
-                        .IsUnique();
-
-                    b.ToTable("UserInterests");
-                });
-
             modelBuilder.Entity("CSE325_Team12_Project.Models.Conversation", b =>
                 {
-                    b.HasOne("CSE325_Team12_Project.Models.User", "Creator")
-                        .WithMany("Conversations")
-                        .HasForeignKey("CreatedBy")
-                        .OnDelete(DeleteBehavior.Cascade)
+                    b.HasOne("CSE325_Team12_Project.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("Creator");
+                    b.Navigation("CreatedBy");
                 });
 
             modelBuilder.Entity("CSE325_Team12_Project.Models.ConversationParticipant", b =>
@@ -271,7 +235,7 @@ namespace CSE325_Team12_Project.Migrations
                         .IsRequired();
 
                     b.HasOne("CSE325_Team12_Project.Models.User", "User")
-                        .WithMany("ConversationParticipants")
+                        .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -308,13 +272,13 @@ namespace CSE325_Team12_Project.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("CSE325_Team12_Project.Models.User", "Sender")
-                        .WithMany("Messages")
+                        .WithMany()
                         .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("CSE325_Team12_Project.Models.Troupe", "Troupe")
-                        .WithMany("Messages")
+                        .WithMany()
                         .HasForeignKey("TroupeId")
                         .OnDelete(DeleteBehavior.Cascade);
 
@@ -336,25 +300,6 @@ namespace CSE325_Team12_Project.Migrations
                     b.Navigation("CreatedBy");
                 });
 
-            modelBuilder.Entity("CSE325_Team12_Project.Models.UserInterest", b =>
-                {
-                    b.HasOne("CSE325_Team12_Project.Models.InterestTag", "InterestTag")
-                        .WithMany("UserInterests")
-                        .HasForeignKey("InterestTagId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("CSE325_Team12_Project.Models.User", "User")
-                        .WithMany("Interests")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("InterestTag");
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("CSE325_Team12_Project.Models.Conversation", b =>
                 {
                     b.Navigation("Messages");
@@ -362,31 +307,16 @@ namespace CSE325_Team12_Project.Migrations
                     b.Navigation("Participants");
                 });
 
-            modelBuilder.Entity("CSE325_Team12_Project.Models.InterestTag", b =>
-                {
-                    b.Navigation("UserInterests");
-                });
-
             modelBuilder.Entity("CSE325_Team12_Project.Models.Troupe", b =>
                 {
                     b.Navigation("Memberships");
-
-                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("CSE325_Team12_Project.Models.User", b =>
                 {
-                    b.Navigation("ConversationParticipants");
-
-                    b.Navigation("Conversations");
-
                     b.Navigation("CreatedTroupes");
 
-                    b.Navigation("Interests");
-
                     b.Navigation("Memberships");
-
-                    b.Navigation("Messages");
                 });
 #pragma warning restore 612, 618
         }

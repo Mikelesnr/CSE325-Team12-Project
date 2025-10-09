@@ -100,25 +100,28 @@ namespace CSE325_Team12_Project.Data
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.HasOne(e => e.User)
-                    .WithMany(u => u.ConversationParticipants)
+                    .WithMany()
                     .HasForeignKey(e => e.UserId)
                     .OnDelete(DeleteBehavior.Cascade);
+
+                // Ensure a user can only be a participant once per conversation
+                entity.HasIndex(e => new { e.ConversationId, e.UserId }).IsUnique();
             });
 
             // Message configuration
             modelBuilder.Entity<Message>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.Content).IsRequired();
+                entity.Property(e => e.Content).IsRequired().HasMaxLength(5000);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
 
                 entity.HasOne(e => e.Sender)
-                    .WithMany(u => u.Messages)
+                    .WithMany()
                     .HasForeignKey(e => e.SenderId)
-                    .OnDelete(DeleteBehavior.Cascade);
+                    .OnDelete(DeleteBehavior.Restrict);
 
                 entity.HasOne(e => e.Troupe)
-                    .WithMany(t => t.Messages)
+                    .WithMany()
                     .HasForeignKey(e => e.TroupeId)
                     .OnDelete(DeleteBehavior.Cascade);
 
@@ -126,36 +129,10 @@ namespace CSE325_Team12_Project.Data
                     .WithMany(c => c.Messages)
                     .HasForeignKey(e => e.ConversationId)
                     .OnDelete(DeleteBehavior.Cascade);
-            });
 
-            // InterestTag configuration
-            modelBuilder.Entity<InterestTag>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
-
-                entity.HasMany(e => e.UserInterests)
-                    .WithOne(ui => ui.InterestTag)
-                    .HasForeignKey(ui => ui.InterestTagId)
-                    .OnDelete(DeleteBehavior.Cascade);
-            });
-
-            // UserInterest configuration
-            modelBuilder.Entity<UserInterest>(entity =>
-            {
-                entity.HasKey(e => e.Id);
-
-                entity.HasOne(e => e.User)
-                    .WithMany(u => u.Interests)
-                    .HasForeignKey(e => e.UserId)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasOne(e => e.InterestTag)
-                    .WithMany(t => t.UserInterests)
-                    .HasForeignKey(e => e.InterestTagId)
-                    .OnDelete(DeleteBehavior.Cascade);
-
-                entity.HasIndex(e => new { e.UserId, e.InterestTagId }).IsUnique();
+                // Ensure either TroupeId or ConversationId is set
+                entity.ToTable(t => t.HasCheckConstraint("CK_Message_Target",
+                    "(TroupeId IS NOT NULL AND ConversationId IS NULL) OR (TroupeId IS NULL AND ConversationId IS NOT NULL)"));
             });
         }
     }
