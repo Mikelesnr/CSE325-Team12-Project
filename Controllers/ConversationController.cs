@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using CSE325_Team12_Project.Data;
 using CSE325_Team12_Project.Models;
 using CSE325_Team12_Project.Services;
+using CSE325_Team12_Project.Models.DTOs;
 
 namespace CSE325_Team12_Project.Controllers
 {
@@ -22,35 +23,65 @@ namespace CSE325_Team12_Project.Controllers
 
         /// <summary>
         /// Start a new conversation with the given users.
-        /// </summary>
         [HttpPost("start")]
         [Authorize]
         public async Task<IActionResult> StartConversation([FromBody] StartConversationRequest request)
         {
             try
             {
+                // Get current user ID from claims
                 var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var currentUserId))
                     return Unauthorized();
 
-                if (request.UserIds == null || request.UserIds.Count == 0)
-                    return BadRequest(new { message = "You must select a participant." });
+                // Validate second participant
+                if (request.UserIds == null || request.UserIds.Count != 1)
+                    return BadRequest(new { message = "You must specify exactly one other participant." });
 
-                // Ensure the current user is included
-                if (!request.UserIds.Contains(currentUserId))
-                    request.UserIds.Add(currentUserId);
+                var secondUserId = request.UserIds.First();
 
-                // Ensure exactly two distinct users
-                request.UserIds = request.UserIds.Distinct().ToList();
-                if (request.UserIds.Count != 2)
-                    return BadRequest(new { message = "A conversation must include exactly two distinct users." });
+                // Ensure distinct users
+                if (secondUserId == currentUserId)
+                    return BadRequest(new { message = "You cannot start a conversation with yourself." });
 
-                var conversation = await _conversationService.CreateConversationAsync(request.UserIds);
+                // Create conversation with both participants
+                var conversation = new Conversation
+                {
+                    Id = Guid.NewGuid(),
+                    CreatedBy = currentUserId,
+                    CreatedAt = DateTime.UtcNow,
+                    IsGroup = false,
+                    Participants = new List<ConversationParticipant>
+            {
+                new ConversationParticipant
+                {
+                    ConversationId = Guid.Empty, // will be set below
+                    UserId = currentUserId,
+                    JoinedAt = DateTime.UtcNow
+                },
+                new ConversationParticipant
+                {
+                    ConversationId = Guid.Empty, // will be set below
+                    UserId = secondUserId,
+                    JoinedAt = DateTime.UtcNow
+                }
+            }
+                };
+
+                // Assign ConversationId to each participant
+                foreach (var participant in conversation.Participants)
+                {
+                    participant.ConversationId = conversation.Id;
+                }
+
+                _context.Conversations.Add(conversation);
+                await _context.SaveChangesAsync();
+
                 return Ok(new { conversation.Id });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Error creating conversation." });
+                return StatusCode(500, new { message = "Error creating conversation.", details = ex.Message });
             }
         }
 
@@ -64,31 +95,47 @@ namespace CSE325_Team12_Project.Controllers
             try
             {
                 var conversation = await _context.Conversations
-                    .Include(c => c.Participants)
-                    .ThenInclude(p => p.User)
+                    .Include(c => c.Participants).ThenInclude(p => p.User)
+                    .Include(c => c.Messages)
                     .FirstOrDefaultAsync(c => c.Id == id);
 
                 if (conversation == null)
                     return NotFound();
 
-                return Ok(new
+                var dto = new ConversationDto
                 {
-                    conversation.Id,
-                    conversation.CreatedAt,
-                    participants = conversation.Participants.Select(p => new
+                    Id = conversation.Id,
+                    CreatedBy = conversation.CreatedBy,
+                    IsGroup = conversation.IsGroup,
+                    CreatedAt = conversation.CreatedAt,
+                    Participants = conversation.Participants.Select(p => new ConversationParticipantDto
                     {
-                        p.User.Id,
-                        p.User.Name,
-                        p.User.Email,
-                        p.User.AvatarUrl
-                    })
-                });
+                        Id = p.Id,
+                        UserId = p.UserId,
+                        Name = p.User?.Name ?? "",
+                        Email = p.User?.Email ?? "",
+                        AvatarUrl = p.User?.AvatarUrl ?? "",
+                        JoinedAt = p.JoinedAt
+                    }).ToList(),
+                    Messages = conversation.Messages
+                        .OrderBy(m => m.CreatedAt)
+                        .Select(m => new MessageDto
+                        {
+                            Id = m.Id,
+                            SenderId = m.SenderId,
+                            Content = m.Content,
+                            CreatedAt = m.CreatedAt
+                        }).ToList()
+                };
+
+                return Ok(dto);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Error fetching conversation." });
+                return StatusCode(500, new { message = "Error fetching conversation.", details = ex.Message });
             }
         }
+
 
         /// <summary>
         /// List all conversations of the current logged-in user.
@@ -105,27 +152,44 @@ namespace CSE325_Team12_Project.Controllers
 
                 var conversations = await _context.ConversationParticipants
                     .Include(cp => cp.Conversation)
-                    .ThenInclude(c => c.Participants)
-                    .ThenInclude(p => p.User)
+                    .ThenInclude(c => c.Participants).ThenInclude(p => p.User)
+                    .Include(cp => cp.Conversation.Messages)
                     .Where(cp => cp.UserId == userId)
                     .Select(cp => cp.Conversation)
                     .ToListAsync();
 
-                return Ok(conversations.Select(c => new
+                var dtos = conversations.Select(c => new ConversationDto
                 {
-                    c.Id,
-                    c.CreatedAt,
-                    participants = c.Participants.Select(p => new
+                    Id = c.Id,
+                    CreatedBy = c.CreatedBy,
+                    IsGroup = c.IsGroup,
+                    CreatedAt = c.CreatedAt,
+                    Participants = c.Participants.Select(p => new ConversationParticipantDto
                     {
-                        p.User.Id,
-                        p.User.Name,
-                        p.User.AvatarUrl
-                    })
-                }));
+                        Id = p.Id,
+                        UserId = p.UserId,
+                        Name = p.User?.Name ?? "",
+                        Email = p.User?.Email ?? "",
+                        AvatarUrl = p.User?.AvatarUrl ?? "",
+                        JoinedAt = p.JoinedAt
+                    }).ToList(),
+                    Messages = c.Messages
+                        .OrderByDescending(m => m.CreatedAt)
+                        .Take(1) // Optional: only return latest message
+                        .Select(m => new MessageDto
+                        {
+                            Id = m.Id,
+                            SenderId = m.SenderId,
+                            Content = m.Content,
+                            CreatedAt = m.CreatedAt
+                        }).ToList()
+                }).ToList();
+
+                return Ok(dtos);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { message = "Error fetching conversations." });
+                return StatusCode(500, new { message = "Error fetching conversations.", details = ex.Message });
             }
         }
     }
