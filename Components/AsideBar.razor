@@ -2,10 +2,11 @@
 @inject NavigationManager NavigationManager
 @inject HttpClient Http
 @inject AuthClientService AuthClient
+@inject SidebarUpdateService SidebarUpdate
 
 <aside class="asidebar @(Settings)">
     <div class="button-container">
-        <Button Variant="ButtonVariant.Primary" Size="ButtonSize.Medium">
+        <Button Variant="ButtonVariant.Primary" Size="ButtonSize.Medium" OnClick="@NavigateToCreate">
             @(IsChatsPage ? "Start a new conversation" : "Create a new troupe")
         </Button>
     </div>
@@ -50,21 +51,35 @@
     public List<ParticipantDto> DirectParticipants { get; private set; } = new();
     public List<TroupeDto> Troupes { get; private set; } = new();
 
-    protected override async Task OnInitializedAsync()
+    private bool hasRendered = false;
+
+    private void NavigateToCreate()
     {
-        NavigationManager.LocationChanged += OnLocationChanged;
+        var target = IsChatsPage ? "/chats/create" : "/troupes/create";
+        NavigationManager.NavigateTo(target);
+    }
 
-        if (!AuthClient.IsAuthenticated)
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasRendered)
         {
-            var restored = await AuthClient.RestoreSessionAsync();
-            if (!restored || AuthClient.CurrentUser == null)
-            {
-                Console.WriteLine("❌ Unable to restore session.");
-                return;
-            }
-        }
+            hasRendered = true;
+            NavigationManager.LocationChanged += OnLocationChanged;
+            SidebarUpdate.OnTroupeJoined += HandleTroupeJoined;
 
-        await LoadSidebarData();
+            if (!AuthClient.IsAuthenticated)
+            {
+                var restored = await AuthClient.RestoreSessionAsync();
+                if (!restored || AuthClient.CurrentUser == null)
+                {
+                    Console.WriteLine("❌ Unable to restore session.");
+                    return;
+                }
+            }
+
+            await LoadSidebarData();
+            StateHasChanged(); // ✅ Refresh UI after loading
+        }
     }
 
     private async Task LoadSidebarData()
@@ -77,11 +92,11 @@
                 var currentId = AuthClient.CurrentUser?.Id.ToString();
 
                 DirectParticipants = conversations?
-                    .SelectMany(c => c.Participants)
-                    .Where(p => p.UserId.ToString() != currentId)
-                    .GroupBy(p => p.UserId)
-                    .Select(g => g.First())
-                    .ToList() ?? new();
+                .SelectMany(c => c.Participants)
+                .Where(p => p.UserId.ToString() != currentId)
+                .GroupBy(p => p.UserId)
+                .Select(g => g.First())
+                .ToList() ?? new();
             }
             else
             {
@@ -96,6 +111,11 @@
         }
     }
 
+    private async void HandleTroupeJoined()
+    {
+        await LoadSidebarData(); // ✅ Refresh troupe list
+    }
+
     private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
         _ = LoadSidebarData(); // refresh sidebar on route change
@@ -106,6 +126,7 @@
     public void Dispose()
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
+        SidebarUpdate.OnTroupeJoined -= HandleTroupeJoined;
     }
 
     public class ConversationDto
