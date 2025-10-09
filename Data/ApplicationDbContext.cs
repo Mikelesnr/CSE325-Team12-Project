@@ -16,6 +16,8 @@ namespace CSE325_Team12_Project.Data
         public DbSet<Conversation> Conversations { get; set; }
         public DbSet<ConversationParticipant> ConversationParticipants { get; set; }
         public DbSet<Message> Messages { get; set; }
+        public DbSet<InterestTag> InterestTags { get; set; }
+        public DbSet<UserInterest> UserInterests { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -47,6 +49,11 @@ namespace CSE325_Team12_Project.Data
                     .WithMany(u => u.CreatedTroupes)
                     .HasForeignKey(e => e.CreatedById)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(e => e.Messages)
+                    .WithOne(m => m.Troupe)
+                    .HasForeignKey(m => m.TroupeId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // Membership configuration
@@ -65,7 +72,6 @@ namespace CSE325_Team12_Project.Data
                     .HasForeignKey(e => e.TroupeId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                // Ensure a user can only be a member of a troupe once
                 entity.HasIndex(e => new { e.UserId, e.TroupeId }).IsUnique();
             });
 
@@ -76,10 +82,10 @@ namespace CSE325_Team12_Project.Data
                 entity.Property(e => e.IsGroup).HasDefaultValue(false);
                 entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
 
-                entity.HasOne(e => e.CreatedBy)
-                    .WithMany()
-                    .HasForeignKey(e => e.CreatedById)
-                    .OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Creator)
+                    .WithMany(u => u.Conversations)
+                    .HasForeignKey(e => e.CreatedBy)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // ConversationParticipant configuration

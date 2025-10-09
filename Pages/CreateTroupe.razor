@@ -1,0 +1,165 @@
+@page "/troupes/create"
+@using System.ComponentModel.DataAnnotations
+@using System.Net.Http.Json
+@using CSE325_Team12_Project.Models // For TroupeVisibility enum
+@using CSE325_Team12_Project.Controllers // For TroupeRequest class
+@inject NavigationManager Navigation
+@inject HttpClient Http
+
+<PageTitle>Create New Troupe</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="text-center mb-0">Start a New Troupe</h3>
+                </div>
+                <div class="card-body">
+
+                    @if (!string.IsNullOrEmpty(errorMessage))
+                    {
+                        <div class="alert alert-danger" role="alert">@errorMessage</div>
+                    }
+                    @if (!string.IsNullOrEmpty(successMessage))
+                    {
+                        <div class="alert alert-success" role="alert">@successMessage</div>
+                    }
+
+                    <EditForm Model="@troupeModel" OnValidSubmit="@HandleCreateTroupe">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Troupe Name <span class="text-danger">*</span></label>
+                            <InputText id="name" class="form-control" @bind-Value="troupeModel.Name" placeholder="e.g., Blazor Devs, Anime Watch Party" />
+                            <ValidationMessage For="@(() => troupeModel.Name)" class="text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description <span class="text-danger">*</span></label>
+                            <InputTextArea id="description" class="form-control" @bind-Value="troupeModel.Description" rows="4" placeholder="Describe what your troupe is about (max 1000 characters)" />
+                            <ValidationMessage For="@(() => troupeModel.Description)" class="text-danger" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="visibility" class="form-label">Visibility</label>
+                            <InputSelect id="visibility" class="form-select" @bind-Value="troupeModel.Visibility">
+                                @foreach (var visibility in Enum.GetValues<TroupeVisibility>())
+                                {
+                                    <option value="@visibility">@(visibility == TroupeVisibility.Public ? "Public (Anyone can join)" : "Private (Approval required)")</option>
+                                }
+                            </InputSelect>
+                            <small class="form-text text-muted">Public Troupes appear in the Discover feed. Private Troupes require an admin invitation or approval.</small>
+                        </div>
+
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg" disabled="@isLoading">
+                                @if (isLoading)
+                                {
+                                    <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                    <span>Creating...</span> @* FIX: Explicitly wrapped content in span tag to fix CS0103/CS8635 errors *@
+                                }
+                                else
+                                {
+                                    <span>Create Troupe</span>
+                                }
+                            </button>
+                        </div>
+                    </EditForm>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    // NOTE: If your TroupeRequest is NOT in CSE325_Team12_Project.Controllers, you need to update the @using statement at the top.
+    private TroupeModel troupeModel = new();
+    private bool isLoading = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    // The backend will likely override CreatedById with the authenticated user's ID.
+    // Use the model property for binding/transfer.
+    private readonly Guid PlaceholderUserId = Guid.Parse("00000000-0000-0000-0000-000000000001");
+
+    protected override void OnInitialized()
+{
+    // FIX: Set the BaseAddress using NavigationManager's BaseUri
+    Http.BaseAddress = new Uri(Navigation.BaseUri); 
+    
+    // Initialize the model with the authenticated user's ID (or a placeholder)
+    troupeModel.CreatedById = PlaceholderUserId;
+}
+
+    private async Task HandleCreateTroupe()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+
+        try
+        {
+            // FIX: Changed to new TroupeRequest() instead of new TroupeController.TroupeRequest()
+            var request = new TroupeRequest 
+            {
+                Name = troupeModel.Name,
+                Description = troupeModel.Description,
+                Visibility = troupeModel.Visibility,
+                CreatedById = troupeModel.CreatedById
+            };
+
+            // Call the API: POST /api/Troupe
+            var response = await Http.PostAsJsonAsync("/api/Troupe", request);
+
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage = "Troupe created successfully! Redirecting...";
+
+                // Redirect to the main Troupes list
+                await Task.Delay(1500);
+                Navigation.NavigateTo("/troupes"); 
+            }
+            else
+            {
+                var errorContent = await response.Content.ReadAsStringAsync();
+                // Attempt to parse a common error response structure
+                if (errorContent.Contains("already exists"))
+                {
+                     errorMessage = "A troupe with this name might already exist.";
+                }
+                else
+                {
+                    errorMessage = $"Failed to create troupe. Status: {(int)response.StatusCode}. Details: {errorContent}";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An unexpected error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    // Local model for Blazor validation
+    public class TroupeModel
+    {
+        [Required(ErrorMessage = "Name is required.")]
+        [StringLength(100, ErrorMessage = "Name cannot exceed 100 characters.")]
+        public string Name { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "Description is required.")]
+        [StringLength(1000, ErrorMessage = "Description cannot exceed 1000 characters.")]
+        public string Description { get; set; } = string.Empty;
+
+        [Required]
+        // This relies on the TroupeVisibility enum being in the Models namespace (CSE325_Team12_Project.Models)
+        public TroupeVisibility Visibility { get; set; } = TroupeVisibility.Public; 
+
+        public Guid CreatedById { get; set; }
+    }
+    
+}
