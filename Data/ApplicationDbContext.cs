@@ -13,6 +13,9 @@ namespace CSE325_Team12_Project.Data
         public DbSet<User> Users { get; set; }
         public DbSet<Troupe> Troupes { get; set; }
         public DbSet<Membership> Memberships { get; set; }
+        public DbSet<Conversation> Conversations { get; set; }
+        public DbSet<ConversationParticipant> ConversationParticipants { get; set; }
+        public DbSet<Message> Messages { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -64,6 +67,66 @@ namespace CSE325_Team12_Project.Data
 
                 // Ensure a user can only be a member of a troupe once
                 entity.HasIndex(e => new { e.UserId, e.TroupeId }).IsUnique();
+            });
+
+            // Conversation configuration
+            modelBuilder.Entity<Conversation>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.IsGroup).HasDefaultValue(false);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+
+                entity.HasOne(e => e.CreatedBy)
+                    .WithMany()
+                    .HasForeignKey(e => e.CreatedById)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ConversationParticipant configuration
+            modelBuilder.Entity<ConversationParticipant>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.JoinedAt).HasDefaultValueSql("datetime('now')");
+
+                entity.HasOne(e => e.Conversation)
+                    .WithMany(c => c.Participants)
+                    .HasForeignKey(e => e.ConversationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Ensure a user can only be a participant once per conversation
+                entity.HasIndex(e => new { e.ConversationId, e.UserId }).IsUnique();
+            });
+
+            // Message configuration
+            modelBuilder.Entity<Message>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Content).IsRequired().HasMaxLength(5000);
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+
+                entity.HasOne(e => e.Sender)
+                    .WithMany()
+                    .HasForeignKey(e => e.SenderId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Troupe)
+                    .WithMany()
+                    .HasForeignKey(e => e.TroupeId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.HasOne(e => e.Conversation)
+                    .WithMany(c => c.Messages)
+                    .HasForeignKey(e => e.ConversationId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                // Ensure either TroupeId or ConversationId is set
+                entity.ToTable(t => t.HasCheckConstraint("CK_Message_Target",
+                    "(TroupeId IS NOT NULL AND ConversationId IS NULL) OR (TroupeId IS NULL AND ConversationId IS NOT NULL)"));
             });
         }
     }

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
 using CSE325_Team12_Project.Data;
 using CSE325_Team12_Project.Services;
+using CSE325_Team12_Project.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -14,6 +15,9 @@ builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddControllers();
 builder.Services.AddHttpClient();
+
+// Add SignalR
+builder.Services.AddSignalR();
 
 // Add Entity Framework
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
@@ -76,6 +80,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<ChatHub>("/chathub");
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 
