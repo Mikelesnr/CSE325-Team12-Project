@@ -1,8 +1,6 @@
 @page "/chat"
 @using Microsoft.AspNetCore.SignalR.Client
-@using Microsoft.JSInterop
 @inject NavigationManager Navigation
-@inject IJSRuntime JSRuntime
 @implements IAsyncDisposable
 
 <PageTitle>Chat - Troupe Chat</PageTitle>
@@ -18,12 +16,8 @@
     <div class="row mt-4">
         <div class="col-md-8">
             <div class="card">
-                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">Messages</h5>
-                    @if (unreadCount > 0)
-                    {
-                        <span class="badge bg-danger rounded-pill">@unreadCount new</span>
-                    }
                 </div>
                 <div class="card-body" style="height: 400px; overflow-y: auto;" id="messageArea">
                     @if (messages.Count == 0)
@@ -122,7 +116,6 @@
     private string userName = "User" + new Random().Next(1000, 9999);
     private string roomId = "demo-room";
     private bool isTyping = false;
-    private int unreadCount = 0;
     private System.Timers.Timer? typingTimer;
 
     private bool IsConnected => hubConnection?.State == HubConnectionState.Connected;
@@ -145,31 +138,21 @@
             .Build();
 
         // Listen for incoming messages
-        hubConnection.On<object>("ReceiveTroupeMessage", async (messageData) =>
+        hubConnection.On<object>("ReceiveTroupeMessage", (messageData) =>
         {
             var json = System.Text.Json.JsonSerializer.Serialize(messageData);
             var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, System.Text.Json.JsonElement>>(json);
             
             if (data != null)
             {
-                var isOwnMessage = data["senderName"].GetString() == userName;
-                
                 messages.Add(new ChatMessage
                 {
                     SenderName = data["senderName"].GetString() ?? "Unknown",
                     Content = data["content"].GetString() ?? "",
                     CreatedAt = DateTime.Parse(data["createdAt"].GetString() ?? DateTime.Now.ToString()),
-                    IsOwnMessage = isOwnMessage
+                    IsOwnMessage = data["senderName"].GetString() == userName
                 });
-                
-                // Show notification for messages from others
-                if (!isOwnMessage)
-                {
-                    unreadCount++;
-                    await ShowNotification(data["senderName"].GetString() ?? "Someone", data["content"].GetString() ?? "");
-                }
-                
-                await InvokeAsync(StateHasChanged);
+                InvokeAsync(StateHasChanged);
             }
         });
 
@@ -221,10 +204,6 @@
         {
             await hubConnection.SendAsync("SendTroupeMessage", roomId, Guid.NewGuid().ToString(), userName, messageInput);
             messageInput = string.Empty;
-            
-            // Reset unread count and page title when user sends a message
-            unreadCount = 0;
-            await JSRuntime.InvokeVoidAsync("resetPageTitle");
         }
     }
 
@@ -241,25 +220,6 @@
             {
                 await hubConnection.SendAsync("SendTypingIndicator", roomId, userName);
             }
-        }
-    }
-
-    private async Task ShowNotification(string senderName, string content)
-    {
-        try
-        {
-            // Play notification sound
-            await JSRuntime.InvokeVoidAsync("playNotificationSound");
-            
-            // Show browser notification if supported and permitted
-            await JSRuntime.InvokeVoidAsync("showBrowserNotification", senderName, content);
-            
-            // Update page title to show unread indicator
-            await JSRuntime.InvokeVoidAsync("updatePageTitle", $"(1) New message from {senderName}");
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Notification error: {ex.Message}");
         }
     }
 
