@@ -26,6 +26,39 @@ namespace CSE325_Team12_Project.Controllers
             return Ok(memberships);
         }
 
+        // GET: api/membership/mine
+        [HttpGet("mine")]
+        [Authorize]
+        public async Task<IActionResult> GetMyMemberships()
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                    return Unauthorized();
+
+                var memberships = await _context.Memberships
+                    .Include(m => m.Troupe)
+                    .Where(m => m.UserId == userId)
+                    .ToListAsync();
+
+                var troupes = memberships.Select(m => new
+                {
+                    m.Troupe.Id,
+                    m.Troupe.Name,
+                    m.Troupe.Description,
+                    m.Troupe.AvatarUrl,
+                    m.JoinedAt
+                });
+
+                return Ok(troupes);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error fetching your memberships.", details = ex.Message });
+            }
+        }
+
         // POST: api/membership/join
         [HttpPost("join")]
         [Authorize]

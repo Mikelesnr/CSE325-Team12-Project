@@ -9,5 +9,4 @@ namespace CSE325_Team12_Project.Models.DTOs
         public string? AvatarUrl { get; set; }
     }
 }
-    }
-}
+

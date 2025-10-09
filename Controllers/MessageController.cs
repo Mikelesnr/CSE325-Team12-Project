@@ -36,10 +36,16 @@ namespace CSE325_Team12_Project.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
+                // 🔐 Get sender ID from authenticated user
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var senderId))
+                    return Unauthorized();
+
+                // 📝 Create the message using the authenticated sender
                 var message = new Message
                 {
                     Id = Guid.NewGuid(),
-                    SenderId = request.SenderId,
+                    SenderId = senderId,
                     Content = request.Content,
                     TroupeId = request.TroupeId,
                     ConversationId = request.ConversationId,
@@ -49,11 +55,11 @@ namespace CSE325_Team12_Project.Controllers
                 _context.Messages.Add(message);
                 await _context.SaveChangesAsync();
 
-                 return Ok(new { message = "Message sent successfully.", data = message });
+                return Ok(new { message = "Message sent successfully.", data = message });
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                return StatusCode(500, new { message = "An error occurred while sending the message." });
+                return StatusCode(500, new { message = "An error occurred while sending the message.", details = ex.Message });
             }
         }
 
