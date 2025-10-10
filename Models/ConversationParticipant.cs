@@ -11,7 +11,9 @@ namespace CSE325_Team12_Project.Models
         public DateTime JoinedAt { get; set; }
 
         // Navigation
-        public virtual Conversation? Conversation { get; set; }
+        [Required]
+        public virtual Conversation Conversation { get; set; } = null!;
+        [Required]
         public virtual User? User { get; set; }
     }
 }

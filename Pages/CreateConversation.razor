@@ -56,7 +56,7 @@ else
             allUsers = users?.Where(u => u.Id != currentUserId).ToList() ?? new();
             ApplyFilter();
 
-            myConversations = await Http.GetFromJsonAsync<List<ConversationDto>>("/api/conversations/mine");
+            myConversations = await Http.GetFromJsonAsync<List<ConversationDto>>("/api/conversations/mine") ?? new();
 
             StateHasChanged();
         }
