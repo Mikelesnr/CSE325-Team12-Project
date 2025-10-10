@@ -1,20 +1,22 @@
 using System.Net.Http.Json;
-using System.Security.Claims;
 using Microsoft.AspNetCore.Components.Authorization;
 using CSE325_Team12_Project.Models.DTOs;
+using Blazored.LocalStorage;
 
 public class AuthClientService
 {
     private readonly HttpClient _http;
     private readonly AuthenticationStateProvider _authStateProvider;
+    private readonly ILocalStorageService _localStorage;
 
     public UserDto? CurrentUser { get; private set; }
     public string? Token { get; private set; }
 
-    public AuthClientService(HttpClient http, AuthenticationStateProvider authStateProvider)
+    public AuthClientService(HttpClient http, AuthenticationStateProvider authStateProvider, ILocalStorageService localStorage)
     {
-        _http = http; // ✅ Blazor injects this with BaseAddress set
+        _http = http;
         _authStateProvider = authStateProvider;
+        _localStorage = localStorage;
     }
 
     public async Task<bool> LoginAsync(string email, string password)
@@ -29,7 +31,15 @@ public class AuthClientService
         _http.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Token);
 
-        return await LoadCurrentUserAsync();
+        await _localStorage.SetItemAsync("authToken", Token);
+
+        var success = await LoadCurrentUserAsync();
+        if (success && CurrentUser != null)
+        {
+            await _localStorage.SetItemAsync("authUser", CurrentUser);
+        }
+
+        return success;
     }
 
     public async Task<bool> RegisterAsync(string name, string email, string password)
@@ -44,7 +54,15 @@ public class AuthClientService
         _http.DefaultRequestHeaders.Authorization =
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Token);
 
-        return await LoadCurrentUserAsync();
+        await _localStorage.SetItemAsync("authToken", Token);
+
+        var success = await LoadCurrentUserAsync();
+        if (success && CurrentUser != null)
+        {
+            await _localStorage.SetItemAsync("authUser", CurrentUser);
+        }
+
+        return success;
     }
 
     public async Task<bool> LoadCurrentUserAsync()
@@ -61,11 +79,25 @@ public class AuthClientService
         }
     }
 
+    public async Task<bool> RestoreSessionAsync()
+    {
+        Token = await _localStorage.GetItemAsync<string>("authToken");
+        if (string.IsNullOrWhiteSpace(Token)) return false;
+
+        _http.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", Token);
+
+        return await LoadCurrentUserAsync();
+    }
+
     public async Task LogoutAsync()
     {
         _http.DefaultRequestHeaders.Authorization = null;
         CurrentUser = null;
         Token = null;
+
+        await _localStorage.RemoveItemAsync("authToken");
+        await _localStorage.RemoveItemAsync("authUser");
     }
 
     public bool IsAuthenticated => CurrentUser != null;

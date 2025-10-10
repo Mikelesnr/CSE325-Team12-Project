@@ -7,6 +7,7 @@ using CSE325_Team12_Project.Hubs;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Blazored.LocalStorage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -60,11 +61,14 @@ builder.Services.AddSignalR();
         }
     });
 });
+builder.Services.AddBlazoredLocalStorage();
+
 
 builder.Services.AddScoped<IConversationService, ConversationService>();
 // Add Entity Framework
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddSingleton<SidebarUpdateService>();
 
 // Add Authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

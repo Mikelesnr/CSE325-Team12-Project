@@ -2,10 +2,10 @@
 
 
 <div class="page">
-    <div class="overlay @(isSidebarOpen ? "active" : "")" @onclick="CloseSidebar"></div>    
+    <div class="overlay @(isSidebarOpen ? "active" : "")" @onclick="CloseSidebar"></div>
     <div class="sidebar  @(isSidebarOpen ? "open" : "closed")">
-        
-       
+
+
         <NavMenu />
     </div>
 
@@ -14,7 +14,7 @@
             <button class="HamButton hamTopButtom" @onclick="ToggleSidebar">&#9776</button>
             <div class="top-nav">
                 <a href="#" @onclick:preventDefault="true">
-                    <img src="images/Notification.svg" alt="Logo" height="35px"/>
+                    <img src="images/Notification.svg" alt="Logo" height="35px" />
                 </a>
                 <Button Variant="ButtonVariant.SecondaryDanger" Size="ButtonSize.Small" OnClick="OnLogoutClick">
                     Log out
@@ -25,7 +25,7 @@
 
         <div class="main-content">
             <AsideBar />
-            <div class="">
+            <div class="body-content">
                 @Body
             </div>
         </div>

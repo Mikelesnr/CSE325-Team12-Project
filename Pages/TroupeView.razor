@@ -1,0 +1,116 @@
+@page "/troupes/{TroupeId:guid}"
+@using System.Net.Http.Json
+@using CSE325_Team12_Project.Models.DTOs
+@inject HttpClient Http
+@inject AuthClientService AuthClient
+
+<h3 class="text-center mt-4">@troupe?.Name</h3>
+
+@if (troupe != null)
+{
+    <div class="text-center mb-3">
+        <button class="btn btn-outline-secondary" @onclick="ToggleDetails">
+            @(showDetails ? "Hide Details" : "Show Details")
+        </button>
+    </div>
+
+    @if (showDetails)
+    {
+        <div class="card mb-4 mx-auto" style="max-width: 80%;">
+            <div class="card-body">
+                <p><strong>Description:</strong> @troupe.Description</p>
+                <p><strong>Created By:</strong> @troupe.CreatedBy?.Name</p>
+                <p><strong>Members:</strong></p>
+                <ul>
+                    @foreach (var member in troupe.Members)
+                    {
+                        <li>@(string.IsNullOrWhiteSpace(member.Name) ? member.Email : member.Name)</li>
+                    }
+                </ul>
+            </div>
+        </div>
+    }
+
+    <div class="chat-box d-flex flex-column"
+        style="height: 100vh; width: 100%; padding: 20px; overflow-y: auto; background-color: #f5f5f5;">
+        <div class="chat-messages mb-3" style="flex-grow: 1; overflow-y: auto;">
+            @foreach (var msg in chatMessages)
+            {
+                var isMine = msg.SenderId == AuthClient.CurrentUser?.Id;
+                <div class="chat-bubble @(isMine ? "mine" : "theirs")">
+                    <div class="chat-content">@msg.Content</div>
+                    <small class="text-muted">@msg.CreatedAt.ToLocalTime().ToString("g")</small>
+                </div>
+            }
+        </div>
+
+        <EditForm Model="@newMessage" OnValidSubmit="@SendMessage">
+            <InputTextArea class="form-control mb-2" @bind-Value="newMessage.Content" rows="3"
+                placeholder="Type your message..." />
+            <div class="d-flex justify-content-center">
+                <button class="btn btn-success px-5" type="submit" disabled="@isSending">Send</button>
+            </div>
+        </EditForm>
+    </div>
+}
+else
+{
+    <p class="text-center mt-5">Loading troupe details...</p>
+}
+
+@code {
+    [Parameter] public Guid TroupeId { get; set; }
+
+    private TroupeDto? troupe;
+    private List<MessageDto> chatMessages = new();
+    private bool showDetails = false;
+    private bool isSending = false;
+
+    private MessageRequest newMessage = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTroupe();
+
+        newMessage.TroupeId = TroupeId;
+        newMessage.ConversationId = null;
+        newMessage.SenderId = AuthClient.CurrentUser?.Id ?? Guid.Empty;
+    }
+
+    private async Task LoadTroupe()
+    {
+        troupe = await Http.GetFromJsonAsync<TroupeDto>($"/api/Troupe/{TroupeId}");
+        chatMessages = troupe?.Messages.ToList() ?? new();
+    }
+
+    private async Task SendMessage()
+    {
+        if (string.IsNullOrWhiteSpace(newMessage.Content)) return;
+
+        isSending = true;
+
+        var response = await Http.PostAsJsonAsync("/api/Message/send", newMessage);
+        if (response.IsSuccessStatusCode)
+        {
+            var sent = await response.Content.ReadFromJsonAsync<MessageDto>();
+            if (sent != null)
+            {
+                chatMessages.Add(sent);
+                newMessage.Content = string.Empty;
+                StateHasChanged(); // ✅ Force re-render
+            }
+        }
+
+        isSending = false;
+    }
+
+    private void ToggleDetails() => showDetails = !showDetails;
+
+    public class MessageRequest
+    {
+        public Guid SenderId { get; set; }
+        public string Content { get; set; } = string.Empty;
+        public Guid TroupeId { get; set; }
+        public Guid? ConversationId { get; set; }
+    }
+}
