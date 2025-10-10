@@ -16,26 +16,30 @@
         <div class="direct-messages">
             @if (IsChatsPage)
             {
-                @foreach (var participant in DirectParticipants)
+                @foreach (var convo in Conversations)
                 {
-                    <div class="message">
-                        <div class="profile-image">
-                            <img src="@GetAvatar(participant.AvatarUrl)" alt="Profile Icon" width="50px" />
+                    var other = convo.Participants.FirstOrDefault(p => p.UserId.ToString() !=
+                    AuthClient.CurrentUser?.Id.ToString());
+                    if (other == null) continue;
+
+                    <button class="message">
+                        <div class="profile-image" @onclick="() => OpenConversation(convo.Id)">
+                            <img src="@GetAvatar(other.AvatarUrl)" alt="Profile Icon" width="50px" />
                         </div>
-                        <p>@participant.Name</p>
-                    </div>
+                        <p @onclick="() => OpenConversation(convo.Id)">@other.Name</p>
+                    </button>
                 }
             }
             else
             {
                 @foreach (var troupe in Troupes)
                 {
-                    <div class="message">
+                    <button class="message" @onclick="() => OpenTroupe(troupe.Id)">
                         <div class="profile-image">
                             <img src="@GetAvatar(troupe.AvatarUrl)" alt="Troupe Icon" width="50px" />
                         </div>
                         <p>@troupe.Name</p>
-                    </div>
+                    </button>
                 }
             }
         </div>
@@ -45,10 +49,11 @@
 @code {
     private string Title => IsChatsPage ? "Direct Messages" : "Troupes";
     private string Settings => !IsSettings ? "visible" : "hidden";
-    private bool IsChatsPage => NavigationManager.Uri.Contains("/chats");
-    private bool IsSettings => NavigationManager.Uri.Contains("/settings");
 
-    public List<ParticipantDto> DirectParticipants { get; private set; } = new();
+    private bool IsChatsPage = false;
+    private bool IsSettings = false;
+
+    public List<ConversationDto> Conversations { get; private set; } = new();
     public List<TroupeDto> Troupes { get; private set; } = new();
 
     private bool hasRendered = false;
@@ -57,6 +62,16 @@
     {
         var target = IsChatsPage ? "/chats/create" : "/troupes/create";
         NavigationManager.NavigateTo(target);
+    }
+
+    private void OpenConversation(Guid conversationId)
+    {
+        NavigationManager.NavigateTo($"/chats/{conversationId}");
+    }
+
+    private void OpenTroupe(Guid troupeId)
+    {
+        NavigationManager.NavigateTo($"/troupes/{troupeId}");
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -77,9 +92,24 @@
                 }
             }
 
+            UpdateRouteState();
             await LoadSidebarData();
-            StateHasChanged(); // ✅ Refresh UI after loading
+            StateHasChanged();
         }
+    }
+
+    private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        UpdateRouteState();
+        await LoadSidebarData();
+        StateHasChanged();
+    }
+
+    private void UpdateRouteState()
+    {
+        var uri = NavigationManager.Uri.ToLower();
+        IsChatsPage = uri.Contains("/chats");
+        IsSettings = uri.Contains("/settings");
     }
 
     private async Task LoadSidebarData()
@@ -88,15 +118,7 @@
         {
             if (IsChatsPage)
             {
-                var conversations = await Http.GetFromJsonAsync<List<ConversationDto>>("/api/conversations/mine");
-                var currentId = AuthClient.CurrentUser?.Id.ToString();
-
-                DirectParticipants = conversations?
-                .SelectMany(c => c.Participants)
-                .Where(p => p.UserId.ToString() != currentId)
-                .GroupBy(p => p.UserId)
-                .Select(g => g.First())
-                .ToList() ?? new();
+                Conversations = await Http.GetFromJsonAsync<List<ConversationDto>>("/api/conversations/mine") ?? new();
             }
             else
             {
@@ -113,12 +135,7 @@
 
     private async void HandleTroupeJoined()
     {
-        await LoadSidebarData(); // ✅ Refresh troupe list
-    }
-
-    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
-    {
-        _ = LoadSidebarData(); // refresh sidebar on route change
+        await LoadSidebarData();
     }
 
     private string GetAvatar(string? url) => string.IsNullOrWhiteSpace(url) ? "images/Profile.svg" : url;

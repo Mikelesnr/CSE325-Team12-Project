@@ -7,14 +7,14 @@
 }
 
 .chat-bubble.mine {
-  background-color: #6ab493;
+  background-color: #99cccf;
   margin-right: 10px;
   margin-left: auto;
   text-align: right;
 }
 
 .chat-bubble.theirs {
-  background-color: #a35259;
+  background-color: #f3bec2;
   margin-left: 10px;
   margin-right: auto;
   text-align: left;
