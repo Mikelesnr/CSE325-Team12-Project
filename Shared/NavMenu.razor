@@ -1,84 +1,85 @@
-﻿<div>
+﻿@inject NavigationManager Navigation
+
+<div>
 
     <div class="logo">
         <a href="/chats">
-            <img src="images/Logo.png" alt="Logo" height="80px"/>
-        </a>    
+            <img src="images/Logo.png" alt="Logo" height="80px" />
+        </a>
     </div>
 
     <div class="nav-links">
         <div class="nav-item @(IsActive("/chats") ? "active" : null)">
             <a href="/chats" class="link">
-                <img src="images/Chat-icon.svg" alt="Chat Icon" height="45px" width="45px"/>
+                <img src="images/Chat-icon.svg" alt="Chat Icon" height="45px" width="45px" />
                 <p>Chats</p>
             </a>
         </div>
         <div class="nav-item @(IsActive("/troupes") ? "active" : null)">
             <a href="/troupes" class="link">
-                <img src="images/Troupes-icon.svg" alt="Troupes Icon" height="45px" width="45px"/>
+                <img src="images/Troupes-icon.svg" alt="Troupes Icon" height="45px" width="45px" />
                 <p>Troupes</p>
             </a>
         </div>
         <div class="nav-item @(IsActive("/settings") ? "active" : null)">
             <a href="/settings" class="link">
-                <img src="images/Settings-icons.svg" alt="Settings Icon" height="45px" width="45px"/>
+                <img src="images/Settings-icons.svg" alt="Settings Icon" height="45px" width="45px" />
                 <p>Settings</p>
             </a>
         </div>
     </div>
 
+    <div class="nav-item px-3">
+        <NavLink class="nav-link" href="chat">
+            <span class="oi oi-chat" aria-hidden="true"></span> Chat Demo
+        </NavLink>
+    </div>
+
+    @if (isAuthenticated)
+    {
         <div class="nav-item px-3">
-            <NavLink class="nav-link" href="chat">
-                <span class="oi oi-chat" aria-hidden="true"></span> Chat Demo
+            <NavLink class="nav-link" href="troupes">
+                <span class="oi oi-people" aria-hidden="true"></span> Troupes
             </NavLink>
         </div>
-        
-        @if (isAuthenticated)
-        {
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="troupes">
-                    <span class="oi oi-people" aria-hidden="true"></span> Troupes
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="messages">
-                    <span class="oi oi-envelope-closed" aria-hidden="true"></span> Messages
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="profile">
-                    <span class="oi oi-person" aria-hidden="true"></span> Profile
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <a class="nav-link" href="#" @onclick="HandleLogout">
-                    <span class="oi oi-account-logout" aria-hidden="true"></span> Logout
-                </a>
-            </div>
-        }
-        else
-        {
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="login">
-                    <span class="oi oi-account-login" aria-hidden="true"></span> Login
-                </NavLink>
-            </div>
-            <div class="nav-item px-3">
-                <NavLink class="nav-link" href="register">
-                    <span class="oi oi-plus" aria-hidden="true"></span> Register
-                </NavLink>
-            </div>
-        }
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="messages">
+                <span class="oi oi-envelope-closed" aria-hidden="true"></span> Messages
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="profile">
+                <span class="oi oi-person" aria-hidden="true"></span> Profile
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <a class="nav-link" href="#" @onclick="HandleLogout">
+                <span class="oi oi-account-logout" aria-hidden="true"></span> Logout
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="login">
+                <span class="oi oi-account-login" aria-hidden="true"></span> Login
+            </NavLink>
+        </div>
+        <div class="nav-item px-3">
+            <NavLink class="nav-link" href="register">
+                <span class="oi oi-plus" aria-hidden="true"></span> Register
+            </NavLink>
+        </div>
+    }
     </nav>
 </div>
-@inject NavigationManager Navigation
 
 @code {
     private bool IsActive(string href)
     {
         var uri = Navigation.ToBaseRelativePath(Navigation.Uri).TrimEnd('/');
         var link = href.TrimStart('/');
-        
+
         return uri.StartsWith(link, StringComparison.OrdinalIgnoreCase);
     }
     protected override void OnInitialized()
