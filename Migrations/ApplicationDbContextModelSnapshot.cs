@@ -120,6 +120,7 @@ namespace CSE325_Team12_Project.Migrations
 
                     b.Property<string>("Content")
                         .IsRequired()
+                        .HasMaxLength(5000)
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("ConversationId")
@@ -177,9 +178,8 @@ namespace CSE325_Team12_Project.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Visibility")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                    b.Property<int>("Visibility")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -217,14 +217,10 @@ namespace CSE325_Team12_Project.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                    b.Property<int>("Role")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Email")
-                        .IsUnique();
 
                     b.ToTable("Users");
                 });
@@ -245,8 +241,7 @@ namespace CSE325_Team12_Project.Migrations
 
                     b.HasIndex("InterestTagId");
 
-                    b.HasIndex("UserId", "InterestTagId")
-                        .IsUnique();
+                    b.HasIndex("UserId");
 
                     b.ToTable("UserInterests");
                 });
@@ -310,7 +305,7 @@ namespace CSE325_Team12_Project.Migrations
                     b.HasOne("CSE325_Team12_Project.Models.User", "Sender")
                         .WithMany("Messages")
                         .HasForeignKey("SenderId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("CSE325_Team12_Project.Models.Troupe", "Troupe")
@@ -330,7 +325,7 @@ namespace CSE325_Team12_Project.Migrations
                     b.HasOne("CSE325_Team12_Project.Models.User", "CreatedBy")
                         .WithMany("CreatedTroupes")
                         .HasForeignKey("CreatedById")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("CreatedBy");
