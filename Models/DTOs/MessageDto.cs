@@ -9,5 +9,9 @@ namespace CSE325_Team12_Project.Models.DTOs
         public string SenderName { get; set; } = string.Empty;
         public string Content { get; set; } = string.Empty;
         public DateTime CreatedAt { get; set; }
+
+        // ✅ Optional linkage to troupe or conversation
+        public Guid? TroupeId { get; set; }
+        public Guid? ConversationId { get; set; }
     }
 }

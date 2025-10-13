@@ -4,7 +4,9 @@
 @using CSE325_Team12_Project.Models.DTOs
 @inject HttpClient Http
 @inject AuthClientService AuthClient
+@inject NavigationManager Navigation
 @using Microsoft.AspNetCore.Components.Forms
+@using Microsoft.AspNetCore.SignalR.Client
 
 <h3 class="text-center mt-4">@troupe?.Name</h3>
 
@@ -36,7 +38,7 @@
     <div class="chat-box d-flex flex-column"
         style="height: 100vh; width: 100%; padding: 20px; overflow-y: auto; background-color: #f5f5f5;">
         <div class="chat-messages mb-3" style="flex-grow: 1; overflow-y: auto;">
-            @foreach (var msg in chatMessages)
+            @foreach (var msg in chatMessages.OrderBy(m => m.CreatedAt))
             {
                 var isMine = msg.SenderId == AuthClient.CurrentUser?.Id;
                 <div class="chat-bubble @(isMine ? "mine" : "theirs")">
@@ -78,10 +80,10 @@ else
     private bool showDetails = false;
     private bool isSending = false;
     private bool loadFailed = false;
+    private bool hasInitialized = false;
 
     private SendMessageRequest newMessage = new();
-
-    private bool hasInitialized = false;
+    private HubConnection? hubConnection;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -106,6 +108,8 @@ else
             newMessage.TroupeId = TroupeId;
             newMessage.ConversationId = null;
             newMessage.SenderId = AuthClient.CurrentUser.Id;
+
+            await InitializeSignalR();
 
             StateHasChanged();
         }
@@ -134,13 +138,35 @@ else
             }
 
             troupe = await response.Content.ReadFromJsonAsync<TroupeDto>();
-            chatMessages = troupe?.Messages.ToList() ?? new();
+            chatMessages = troupe?.Messages.OrderBy(m => m.CreatedAt).ToList() ?? new();
         }
         catch (Exception ex)
         {
             Console.Error.WriteLine($"❌ Exception in LoadTroupe: {ex.Message}");
             loadFailed = true;
         }
+    }
+
+    private async Task InitializeSignalR()
+    {
+        hubConnection = new HubConnectionBuilder()
+        .WithUrl(Navigation.ToAbsoluteUri("/chathub"))
+        .WithAutomaticReconnect()
+        .Build();
+
+        // 🔄 SignalR Listener: Refresh UI only if incoming message matches current troupe
+        hubConnection.On<MessageDto>("ReceiveTroupeMessage", msg =>
+        {
+            if (msg.TroupeId == TroupeId)
+            {
+                chatMessages.Add(msg);
+                chatMessages = chatMessages.OrderBy(m => m.CreatedAt).ToList();
+                InvokeAsync(StateHasChanged);
+            }
+        });
+
+        await hubConnection.StartAsync();
+        await hubConnection.SendAsync("JoinTroupe", TroupeId.ToString());
     }
 
     private async Task SendMessage()
@@ -155,7 +181,7 @@ else
             var sent = await response.Content.ReadFromJsonAsync<MessageDto>();
             if (sent != null)
             {
-                chatMessages.Add(sent);
+                chatMessages = chatMessages.OrderBy(m => m.CreatedAt).ToList();
                 newMessage.Content = string.Empty;
                 StateHasChanged();
             }
@@ -170,4 +196,13 @@ else
     }
 
     private void ToggleDetails() => showDetails = !showDetails;
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.SendAsync("LeaveTroupe", TroupeId.ToString());
+            await hubConnection.DisposeAsync();
+        }
+    }
 }

@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.SignalR;
 using CSE325_Team12_Project.Models;
 using CSE325_Team12_Project.Data;
 using CSE325_Team12_Project.Models.DTOs;
+using CSE325_Team12_Project.Hubs;
 
 namespace CSE325_Team12_Project.Controllers
 {
@@ -12,10 +14,12 @@ namespace CSE325_Team12_Project.Controllers
     public class MessageController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IHubContext<ChatHub> _hubContext;
 
-        public MessageController(ApplicationDbContext context)
+        public MessageController(ApplicationDbContext context, IHubContext<ChatHub> hubContext)
         {
             _context = context;
+            _hubContext = hubContext;
         }
 
         // ✅ GET: api/message
@@ -64,14 +68,30 @@ namespace CSE325_Team12_Project.Controllers
                 _context.Messages.Add(message);
                 await _context.SaveChangesAsync();
 
-                return Ok(new MessageDto
+                var dto = new MessageDto
                 {
                     Id = message.Id,
                     SenderId = message.SenderId,
                     SenderName = sender.Name,
                     Content = message.Content,
-                    CreatedAt = message.CreatedAt
-                });
+                    CreatedAt = message.CreatedAt,
+                    TroupeId = message.TroupeId,
+                    ConversationId = message.ConversationId
+                };
+
+                // ✅ Broadcast to SignalR group
+                if (dto.TroupeId != null)
+                {
+                    await _hubContext.Clients.Group($"troupe_{dto.TroupeId}")
+                        .SendAsync("ReceiveTroupeMessage", dto);
+                }
+                else if (dto.ConversationId != null)
+                {
+                    await _hubContext.Clients.Group($"conversation_{dto.ConversationId}")
+                        .SendAsync("ReceiveDirectMessage", dto);
+                }
+
+                return Ok(dto);
             }
             catch (Exception ex)
             {
@@ -100,14 +120,14 @@ namespace CSE325_Team12_Project.Controllers
                 return StatusCode(500, new { message = "An error occurred while deleting the message." });
             }
         }
-    }
 
-    // ✅ DTO used for incoming requests
-    public class SendMessageRequest
-    {
-        public Guid SenderId { get; set; }
-        public string Content { get; set; } = string.Empty;
-        public Guid? TroupeId { get; set; }
-        public Guid? ConversationId { get; set; }
+        // ✅ DTO used for incoming requests
+        public class SendMessageRequest
+        {
+            public Guid SenderId { get; set; }
+            public string Content { get; set; } = string.Empty;
+            public Guid? TroupeId { get; set; }
+            public Guid? ConversationId { get; set; }
+        }
     }
 }
