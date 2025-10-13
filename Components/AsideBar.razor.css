@@ -37,15 +37,17 @@
 }
 
 .message {
+  all: unset;
   display: flex;
   gap: 0.8rem;
   align-items: center;
   cursor: pointer;
-  width: 100%;
+  width: 93%;
   padding: 5px 0;
   padding-left: 15px;
-  border: 1px solid var(--contrast-color);
-  border-radius: 0.5rem;
+  /* border: 1px solid var(--contrast-color); */
+  /* border-radius: 0.5rem; */
+  background-color: none;
 }
 
 .message:hover {
@@ -58,15 +60,22 @@
   margin: 0;
   font-weight: 500;
 }
+
+.message.active {
+  background-color: var(--primary-color);
+  color: white;
+  border-radius: 0.5rem;
+  border: 2px solid var(--primary-color);
+}
+
 .profile-image {
   border-radius: 50%;
-  border: 1px solid;
 }
 
 .direct-messages {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.2rem;
   margin-top: 20px;
   width: 100%;
 }
