@@ -8,7 +8,12 @@ using Blazored.LocalStorage;
 using CSE325_Team12_Project.Data;
 using CSE325_Team12_Project.Services;
 using CSE325_Team12_Project.Hubs;
-using Microsoft.AspNetCore.Components.Server.Circuits; // ✅ Added for ConnectionTracker
+using Microsoft.AspNetCore.Components.Server.Circuits; // ✅ Added for 
+using DotNetEnv; // ✅ Added for environment variable loading
+
+Env.Load();
+
+string? connectionString = Environment.GetEnvironmentVariable("SUPABASE_CONNECTION_STRING");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -90,8 +95,10 @@ builder.Services.AddCors(options =>
 });
 
 // ✅ Entity Framework
+// builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseNpgsql(connectionString));
 
 // ✅ SignalR
 builder.Services.AddSignalR(options =>

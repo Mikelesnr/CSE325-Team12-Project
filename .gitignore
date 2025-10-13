@@ -47,3 +47,5 @@ _ReSharper.Caches/
 Dockerfile.ef
 
 CSE325-Team12-Project.csproj
+
+.env

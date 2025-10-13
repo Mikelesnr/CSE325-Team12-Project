@@ -1,10 +1,12 @@
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CSE325_Team12_Project.Models
 {
     public class Troupe
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [Key]
+        public Guid Id { get; set; }
 
         [Required]
         [StringLength(100)]
@@ -20,14 +22,18 @@ namespace CSE325_Team12_Project.Models
         [Required]
         public Guid CreatedById { get; set; }
 
+        [Required]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Navigation properties
-        public virtual User CreatedBy { get; set; } = null!;
         public string? AvatarUrl { get; set; }
+
+        // Navigation properties
+        [ForeignKey(nameof(CreatedById))]
+        public virtual User CreatedBy { get; set; } = null!;
+
         public virtual ICollection<Membership> Memberships { get; set; } = new List<Membership>();
         public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
-
     }
 
     public enum TroupeVisibility
