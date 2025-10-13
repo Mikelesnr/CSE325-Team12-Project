@@ -2,14 +2,20 @@
   --primary-color: #1c6ec2;
   --secondary-color: #e5eef8;
   --contrast-color: #dfdfdf;
-  --title-font: "Rubik", sans-serif;
+  --title-font: 'Rubik', sans-serif;
 }
 
-@import url("open-iconic/font/css/open-iconic-bootstrap.min.css");
+@import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
 
 html,
 body {
-  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
   width: 100%;
 }
 
@@ -40,7 +46,7 @@ a,
   padding-top: 1.1rem;
 }
 
-.valid.modified:not([type="checkbox"]) {
+.valid.modified:not([type='checkbox']) {
   outline: 1px solid #26b050;
 }
 
@@ -80,7 +86,7 @@ a,
 }
 
 .blazor-error-boundary::after {
-  content: "An error has occurred.";
+  content: 'An error has occurred.';
 }
 
 .chat-bubble {
@@ -92,15 +98,30 @@ a,
 }
 
 .chat-bubble.mine {
-  background-color: #d1e7dd;
+  background-color: #e5eef8;
   margin-right: 10px;
   margin-left: auto;
   text-align: right;
 }
 
 .chat-bubble.theirs {
-  background-color: #f8d7da;
+  background-color: #fefefe;
   margin-left: 10px;
   margin-right: auto;
   text-align: left;
+}
+
+.chat-input form {
+  display: flex;
+  gap: 0.5rem;
+  padding: 15px;
+  align-items: center;
+}
+
+.text-area {
+  flex-grow: 1;
+  border: 1px solid #ccc;
+  border-radius: 0.5rem;
+  padding: 0.5rem;
+  resize: none;
 }

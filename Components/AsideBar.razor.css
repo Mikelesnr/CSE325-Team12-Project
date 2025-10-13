@@ -1,7 +1,7 @@
 .asidebar {
   background-color: var(--secondary-color);
   width: 250px;
-  height: 100vh;
+  min-height: 95vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -44,6 +44,8 @@
   width: 100%;
   padding: 5px 0;
   padding-left: 15px;
+  border: 1px solid var(--contrast-color);
+  border-radius: 0.5rem;
 }
 
 .message:hover {
@@ -54,9 +56,8 @@
 
 .message p {
   margin: 0;
-  font-weight: bold;
+  font-weight: 500;
 }
-
 .profile-image {
   border-radius: 50%;
   border: 1px solid;
