@@ -66,18 +66,50 @@ namespace CSE325_Team12_Project.Controllers
         // GET: api/troupe/{id}
         [HttpGet("{id}")]
         [Authorize]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<ActionResult<TroupeDto>> GetTroupeById(Guid id)
         {
             var troupe = await _context.Troupes
                 .Include(t => t.CreatedBy)
                 .Include(t => t.Memberships)
+                    .ThenInclude(m => m.User)
                 .Include(t => t.Messages)
+                    .ThenInclude(m => m.Sender)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
-            if (troupe is null)
-                return NotFound(new { message = "Troupe not found." });
+            if (troupe == null)
+                return NotFound();
 
-            var dto = MapToDto(troupe);
+            var dto = new TroupeDto
+            {
+                Id = troupe.Id,
+                Name = troupe.Name,
+                Description = troupe.Description,
+                Visibility = troupe.Visibility,
+                CreatedAt = troupe.CreatedAt,
+                AvatarUrl = troupe.AvatarUrl,
+                CreatedBy = new UserDto
+                {
+                    Id = troupe.CreatedBy.Id,
+                    Name = troupe.CreatedBy.Name,
+                    AvatarUrl = troupe.CreatedBy.AvatarUrl
+                },
+                Members = troupe.Memberships.Select(m => new MemberDto
+                {
+                    UserId = m.UserId,
+                    Name = m.User?.Name ?? "",
+                    Email = m.User?.Email ?? "",
+                    JoinedAt = m.JoinedAt
+                }).ToList(),
+                Messages = troupe.Messages.Select(msg => new MessageDto
+                {
+                    Id = msg.Id,
+                    SenderId = msg.SenderId,
+                    SenderName = msg.Sender?.Name ?? "",
+                    Content = msg.Content,
+                    CreatedAt = msg.CreatedAt
+                }).ToList()
+            };
+
             return Ok(dto);
         }
 
