@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using CSE325_Team12_Project.Models;
 using CSE325_Team12_Project.Data;
+using CSE325_Team12_Project.Models.DTOs;
 
 namespace CSE325_Team12_Project.Controllers
 {
@@ -17,7 +18,7 @@ namespace CSE325_Team12_Project.Controllers
             _context = context;
         }
 
-        // GET: api/message
+        // ✅ GET: api/message
         [HttpGet]
         [Authorize]
         public async Task<IActionResult> GetAll()
@@ -26,7 +27,7 @@ namespace CSE325_Team12_Project.Controllers
             return Ok(messages);
         }
 
-        // POST: api/message/send
+        // ✅ POST: api/message/send
         [HttpPost("send")]
         [Authorize]
         public async Task<IActionResult> Send([FromBody] SendMessageRequest request)
@@ -36,12 +37,20 @@ namespace CSE325_Team12_Project.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                // 🔐 Get sender ID from authenticated user
+                if ((request.TroupeId == null && request.ConversationId == null) ||
+                    (request.TroupeId != null && request.ConversationId != null))
+                {
+                    return BadRequest(new { message = "Message must target either a troupe or a conversation, not both." });
+                }
+
                 var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var senderId))
                     return Unauthorized();
 
-                // 📝 Create the message using the authenticated sender
+                var sender = await _context.Users.FindAsync(senderId);
+                if (sender == null)
+                    return Unauthorized();
+
                 var message = new Message
                 {
                     Id = Guid.NewGuid(),
@@ -55,7 +64,14 @@ namespace CSE325_Team12_Project.Controllers
                 _context.Messages.Add(message);
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Message sent successfully.", data = message });
+                return Ok(new MessageDto
+                {
+                    Id = message.Id,
+                    SenderId = message.SenderId,
+                    SenderName = sender.Name,
+                    Content = message.Content,
+                    CreatedAt = message.CreatedAt
+                });
             }
             catch (Exception ex)
             {
@@ -63,7 +79,7 @@ namespace CSE325_Team12_Project.Controllers
             }
         }
 
-        // DELETE: api/message/{id}
+        // ✅ DELETE: api/message/{id}
         [HttpDelete("{id}")]
         [Authorize]
         public async Task<IActionResult> Delete(Guid id)
@@ -77,8 +93,7 @@ namespace CSE325_Team12_Project.Controllers
                 _context.Messages.Remove(message);
                 await _context.SaveChangesAsync();
 
-                return Ok(new { message = "Message sent successfully.", data = message });
-
+                return Ok(new { message = "Message deleted successfully.", data = message });
             }
             catch (Exception)
             {
@@ -87,6 +102,7 @@ namespace CSE325_Team12_Project.Controllers
         }
     }
 
+    // ✅ DTO used for incoming requests
     public class SendMessageRequest
     {
         public Guid SenderId { get; set; }

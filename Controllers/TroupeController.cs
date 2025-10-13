@@ -65,7 +65,7 @@ namespace CSE325_Team12_Project.Controllers
 
         // GET: api/troupe/{id}
         [HttpGet("{id}")]
-        // [Authorize]
+        [Authorize]
         public async Task<IActionResult> GetById(Guid id)
         {
             var troupe = await _context.Troupes

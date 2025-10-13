@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CSE325_Team12_Project.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20251009174541_AddMessagingModels")]
-    partial class AddMessagingModels
+    [Migration("20251013022510_InitialCleanSchema")]
+    partial class InitialCleanSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -31,7 +31,7 @@ namespace CSE325_Team12_Project.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValueSql("datetime('now')");
 
-                    b.Property<Guid>("CreatedById")
+                    b.Property<Guid>("CreatedBy")
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("IsGroup")
@@ -41,7 +41,7 @@ namespace CSE325_Team12_Project.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedById");
+                    b.HasIndex("CreatedBy");
 
                     b.ToTable("Conversations");
                 });
@@ -65,12 +65,27 @@ namespace CSE325_Team12_Project.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ConversationId");
+
                     b.HasIndex("UserId");
 
-                    b.HasIndex("ConversationId", "UserId")
-                        .IsUnique();
-
                     b.ToTable("ConversationParticipants");
+                });
+
+            modelBuilder.Entity("CSE325_Team12_Project.Models.InterestTag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("InterestTags");
                 });
 
             modelBuilder.Entity("CSE325_Team12_Project.Models.Membership", b =>
@@ -145,6 +160,9 @@ namespace CSE325_Team12_Project.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("AvatarUrl")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT")
@@ -163,9 +181,8 @@ namespace CSE325_Team12_Project.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Visibility")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                    b.Property<int>("Visibility")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
 
@@ -203,27 +220,44 @@ namespace CSE325_Team12_Project.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Role")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
+                    b.Property<int>("Role")
+                        .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Email")
-                        .IsUnique();
 
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("CSE325_Team12_Project.Models.UserInterest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("InterestTagId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InterestTagId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("UserInterests");
+                });
+
             modelBuilder.Entity("CSE325_Team12_Project.Models.Conversation", b =>
                 {
-                    b.HasOne("CSE325_Team12_Project.Models.User", "CreatedBy")
-                        .WithMany()
-                        .HasForeignKey("CreatedById")
-                        .OnDelete(DeleteBehavior.Restrict)
+                    b.HasOne("CSE325_Team12_Project.Models.User", "Creator")
+                        .WithMany("Conversations")
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("CreatedBy");
+                    b.Navigation("Creator");
                 });
 
             modelBuilder.Entity("CSE325_Team12_Project.Models.ConversationParticipant", b =>
@@ -235,7 +269,7 @@ namespace CSE325_Team12_Project.Migrations
                         .IsRequired();
 
                     b.HasOne("CSE325_Team12_Project.Models.User", "User")
-                        .WithMany()
+                        .WithMany("ConversationParticipants")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -272,13 +306,13 @@ namespace CSE325_Team12_Project.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("CSE325_Team12_Project.Models.User", "Sender")
-                        .WithMany()
+                        .WithMany("Messages")
                         .HasForeignKey("SenderId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
                     b.HasOne("CSE325_Team12_Project.Models.Troupe", "Troupe")
-                        .WithMany()
+                        .WithMany("Messages")
                         .HasForeignKey("TroupeId")
                         .OnDelete(DeleteBehavior.Cascade);
 
@@ -294,10 +328,29 @@ namespace CSE325_Team12_Project.Migrations
                     b.HasOne("CSE325_Team12_Project.Models.User", "CreatedBy")
                         .WithMany("CreatedTroupes")
                         .HasForeignKey("CreatedById")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("CreatedBy");
+                });
+
+            modelBuilder.Entity("CSE325_Team12_Project.Models.UserInterest", b =>
+                {
+                    b.HasOne("CSE325_Team12_Project.Models.InterestTag", "InterestTag")
+                        .WithMany("UserInterests")
+                        .HasForeignKey("InterestTagId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CSE325_Team12_Project.Models.User", "User")
+                        .WithMany("Interests")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("InterestTag");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CSE325_Team12_Project.Models.Conversation", b =>
@@ -307,16 +360,31 @@ namespace CSE325_Team12_Project.Migrations
                     b.Navigation("Participants");
                 });
 
+            modelBuilder.Entity("CSE325_Team12_Project.Models.InterestTag", b =>
+                {
+                    b.Navigation("UserInterests");
+                });
+
             modelBuilder.Entity("CSE325_Team12_Project.Models.Troupe", b =>
                 {
                     b.Navigation("Memberships");
+
+                    b.Navigation("Messages");
                 });
 
             modelBuilder.Entity("CSE325_Team12_Project.Models.User", b =>
                 {
+                    b.Navigation("ConversationParticipants");
+
+                    b.Navigation("Conversations");
+
                     b.Navigation("CreatedTroupes");
 
+                    b.Navigation("Interests");
+
                     b.Navigation("Memberships");
+
+                    b.Navigation("Messages");
                 });
 #pragma warning restore 612, 618
         }
