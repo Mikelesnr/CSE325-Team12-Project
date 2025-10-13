@@ -1,11 +1,11 @@
+@import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
+
 :root {
   --primary-color: #1c6ec2;
   --secondary-color: #e5eef8;
   --contrast-color: #dfdfdf;
   --title-font: 'Rubik', sans-serif;
 }
-
-@import url('open-iconic/font/css/open-iconic-bootstrap.min.css');
 
 *,
 *::before,

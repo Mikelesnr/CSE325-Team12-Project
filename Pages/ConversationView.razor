@@ -5,13 +5,16 @@
 @inject HttpClient Http
 @inject AuthClientService AuthClient
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <div class="chat-box">
     <div class="chat-header">
         <div class="d-flex align-items-center gap-3">
             <img src="@GetAvatar(otherParticipant?.AvatarUrl)" alt="Profile Icon" width="50px" />
             <div>
-                <h3 class="conversation-name">@otherParticipant?.Name</h3>
+                <h3 class="conversation-name">
+                    @(otherParticipant != null ? otherParticipant.Name : "Loading user...")
+                </h3>
                 <p class="text-muted user-email">email@example.com</p>
             </div>
         </div>
@@ -21,7 +24,7 @@
     @if (conversation != null)
     {
         <div class="chat-body">
-            <div class="chat-messages">
+            <div class="chat-messages" @ref="chatMessagesRef">
                 @foreach (var msg in chatMessages.OrderBy(m => m.CreatedAt))
                 {
                     var isMine = msg.SenderId == AuthClient.CurrentUser?.Id;
@@ -62,10 +65,12 @@
     private List<MessageDto> chatMessages = new();
     private bool isSending = false;
     private bool hasRendered = false;
-    private UserDto? otherParticipant;
+
+    private ConversationParticipantDto? otherParticipant;
 
     private MessageRequest newMessage = new();
     private HubConnection? hubConnection;
+    private ElementReference chatMessagesRef;
 
     private string GetAvatar(string? url) => string.IsNullOrWhiteSpace(url) ? "images/Profile.svg" : url;
 
@@ -76,9 +81,22 @@
             hasRendered = true;
 
             var restored = await AuthClient.RestoreSessionAsync();
-            if (!restored || AuthClient.CurrentUser == null)
+            if (!restored)
             {
                 Console.WriteLine("❌ Unable to restore session.");
+                return;
+            }
+
+            
+            int attempts = 0;
+            while (AuthClient.CurrentUser == null && attempts < 10)
+            {
+                await Task.Delay(200);
+                attempts++;
+            }
+            if (AuthClient.CurrentUser == null)
+            {
+                Console.WriteLine("❌ Current user not available after waiting.");
                 return;
             }
 
@@ -92,6 +110,14 @@
 
             StateHasChanged();
         }
+
+        // Scroll al final después de renderizar
+        await ScrollToBottomAsync();
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        await JS.InvokeVoidAsync("scrollToBottom", chatMessagesRef);
     }
 
     private async Task LoadConversation()
@@ -100,9 +126,7 @@
         {
             conversation = await Http.GetFromJsonAsync<ConversationDto>($"/api/Conversations/{ConversationId}");
             chatMessages = conversation?.Messages.OrderBy(m => m.CreatedAt).ToList() ?? new();
-
-            otherParticipant = conversation?.Participants
-            .FirstOrDefault(p => p.Id != AuthClient.CurrentUser?.Id);
+            otherParticipant = conversation?.OtherParticipant;
         }
         catch (HttpRequestException ex)
         {
@@ -119,13 +143,14 @@
         .Build();
 
         // 🔄 SignalR Listener: Refresh UI only if incoming message matches current conversation
-        hubConnection.On<MessageDto>("ReceiveDirectMessage", msg =>
+        hubConnection.On<MessageDto>("ReceiveDirectMessage", async msg =>
         {
             if (msg.ConversationId == ConversationId)
             {
                 chatMessages.Add(msg);
                 chatMessages = chatMessages.OrderBy(m => m.CreatedAt).ToList();
-                InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
+                await InvokeAsync(ScrollToBottomAsync);
             }
         });
 
@@ -146,8 +171,9 @@
             Console.Error.WriteLine($"❌ Message send failed: {response.StatusCode} - {error}");
         }
 
-        newMessage.Content = string.Empty;
-        isSending = false;
+    newMessage.Content = string.Empty;
+    isSending = false;
+    await ScrollToBottomAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -159,6 +185,33 @@
         }
     }
 
+    protected override async Task OnParametersSetAsync()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.SendAsync("LeaveConversation", ConversationId.ToString());
+            await hubConnection.DisposeAsync();
+            hubConnection = null;
+        }
+
+        await LoadConversation();
+
+        if (AuthClient.CurrentUser != null)
+        {
+            newMessage.ConversationId = ConversationId;
+            newMessage.TroupeId = null;
+            newMessage.SenderId = AuthClient.CurrentUser.Id;
+
+            await InitializeSignalR();
+        }
+        else
+        {
+            Console.Error.WriteLine("❌ Usuario no autenticado. No se puede inicializar la conversación.");
+        }
+
+        StateHasChanged();
+    }
+
     public class MessageRequest
     {
         public Guid SenderId { get; set; }
@@ -167,13 +220,4 @@
         public Guid? ConversationId { get; set; }
     }
 
-    public class ConversationDto
-    {
-        public Guid Id { get; set; }
-        public Guid CreatedBy { get; set; }
-        public bool IsGroup { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public List<UserDto> Participants { get; set; } = new();
-        public List<MessageDto> Messages { get; set; } = new();
-    }
 }

@@ -10,7 +10,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="~/" />
     <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
-    <link href="css/site.css" rel="stylesheet" />
+    <link href="css/site.css?v=2" rel="stylesheet" />
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#2C2F33">
         <!-- iOS PWA Support -->
@@ -32,7 +32,7 @@
             .catch(err => console.error('Service Worker registration failed', err));
             }
     </script>
-    <link href="_framework/scoped.styles.css" rel="stylesheet" />
+  
 </head>
 <body>
     <component type="typeof(App)" render-mode="ServerPrerendered" />
@@ -49,5 +49,6 @@
     </div>
 
     <script src="_framework/blazor.server.js"></script>
+    <script src="js/scrollToBottom.js"></script>
 </body>
 </html>
