@@ -1,12 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace CSE325_Team12_Project.Models
 {
     public class User
     {
-        public Guid Id { get; set; } = Guid.NewGuid();
+        [Key]
+        public Guid Id { get; set; }
 
         [Required]
         [StringLength(100)]
@@ -26,13 +28,13 @@ namespace CSE325_Team12_Project.Models
         [Required]
         public UserRole Role { get; set; } = UserRole.Trouper;
 
+        [Required]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        // Existing navigation
+        // Navigation
         public virtual ICollection<Membership> Memberships { get; set; } = new List<Membership>();
         public virtual ICollection<Troupe> CreatedTroupes { get; set; } = new List<Troupe>();
-
-        // Added navigation (safe for auth)
         public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
         public virtual ICollection<Conversation> Conversations { get; set; } = new List<Conversation>();
         public virtual ICollection<ConversationParticipant> ConversationParticipants { get; set; } = new List<ConversationParticipant>();

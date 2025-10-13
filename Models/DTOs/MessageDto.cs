@@ -13,5 +13,10 @@ namespace CSE325_Team12_Project.Models.DTOs
         // ✅ Optional linkage to troupe or conversation
         public Guid? TroupeId { get; set; }
         public Guid? ConversationId { get; set; }
+
+
+        // ✅ For alert filtering
+        public TroupeDto? Troupe { get; set; }
+        public ConversationDto? Conversation { get; set; }
     }
 }

@@ -29,7 +29,7 @@ namespace CSE325_Team12_Project.Data
                 entity.Property(e => e.Email).IsRequired().HasMaxLength(255);
                 entity.Property(e => e.Password).IsRequired();
                 entity.Property(e => e.AvatarUrl).HasMaxLength(500);
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
                 entity.Property(e => e.Role).IsRequired();
 
                 entity.HasMany(e => e.Memberships)
@@ -69,7 +69,7 @@ namespace CSE325_Team12_Project.Data
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
                 entity.Property(e => e.Description).IsRequired().HasMaxLength(1000);
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
                 entity.Property(e => e.Visibility).IsRequired();
 
                 entity.HasOne(e => e.CreatedBy)
@@ -92,7 +92,7 @@ namespace CSE325_Team12_Project.Data
             modelBuilder.Entity<Membership>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.JoinedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.JoinedAt).HasDefaultValueSql("NOW()");
 
                 entity.HasOne(e => e.User)
                     .WithMany(u => u.Memberships)
@@ -112,7 +112,7 @@ namespace CSE325_Team12_Project.Data
             {
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Content).IsRequired().HasMaxLength(5000);
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
 
                 entity.HasOne(e => e.Sender)
                     .WithMany(u => u.Messages)
@@ -130,14 +130,15 @@ namespace CSE325_Team12_Project.Data
                     .OnDelete(DeleteBehavior.Cascade);
 
                 entity.ToTable(t => t.HasCheckConstraint("CK_Message_Target",
-                    "(TroupeId IS NOT NULL AND ConversationId IS NULL) OR (TroupeId IS NULL AND ConversationId IS NOT NULL)"));
+                    "(\"TroupeId\" IS NOT NULL AND \"ConversationId\" IS NULL) OR (\"TroupeId\" IS NULL AND \"ConversationId\" IS NOT NULL)"));
+
             });
 
             // Conversation
             modelBuilder.Entity<Conversation>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.CreatedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.CreatedAt).HasDefaultValueSql("NOW()");
                 entity.Property(e => e.IsGroup).HasDefaultValue(false);
 
                 entity.HasOne(e => e.Creator)
@@ -160,7 +161,7 @@ namespace CSE325_Team12_Project.Data
             modelBuilder.Entity<ConversationParticipant>(entity =>
             {
                 entity.HasKey(e => e.Id);
-                entity.Property(e => e.JoinedAt).HasDefaultValueSql("datetime('now')");
+                entity.Property(e => e.JoinedAt).HasDefaultValueSql("NOW()");
 
                 entity.HasOne(e => e.User)
                     .WithMany(u => u.ConversationParticipants)
