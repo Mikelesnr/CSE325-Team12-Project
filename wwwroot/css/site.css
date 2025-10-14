@@ -129,3 +129,8 @@ a,
   padding: 0.5rem;
   resize: none;
 }
+
+.settings-form {
+  max-width: 100%;
+  padding: 1rem;
+}
