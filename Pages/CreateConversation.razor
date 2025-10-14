@@ -3,10 +3,10 @@
 @inject NavigationManager Navigation
 @inject AuthClientService AuthClient
 
-<h3 class="text-center mt-4">Start a Conversation</h3>
+<h3 class="text-center mt-4 mb-4">Start a Conversation</h3>
 
-<div class="mb-3 mx-auto" style="max-width: 400px;">
-    <input class="form-control" placeholder="Search users..." value="@searchTerm" @oninput="OnSearchChanged" />
+<div class="search-bar">
+    <input class="form-control" placeholder="🔍 Search users..." value="@searchTerm" @oninput="OnSearchChanged" />
 </div>
 
 @if (filteredUsers.Count == 0)
@@ -15,16 +15,18 @@
 }
 else
 {
-    <div class="list-group mx-auto" style="max-width: 600px;">
+    
+    <div class="suggested-users">
+        <h4 class="text-muted">Suggested Users:</h4>
         @foreach (var user in filteredUsers)
         {
-            <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+            <button class="user-suggestion"
                 @onclick="() => StartConversation(user.Id)">
-                <div>
-                    <strong>@user.Name</strong><br />
+                <div class="user-info">
+                    <strong>@user.Name</strong>
                     <small class="text-muted">@user.Email</small>
                 </div>
-                <span class="badge bg-primary">Chat</span>
+                <span class="btn btn-primary">Chat</span>
             </button>
         }
     </div>

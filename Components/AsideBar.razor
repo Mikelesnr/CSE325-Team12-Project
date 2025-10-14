@@ -21,12 +21,12 @@
                     var other = convo.Participants.FirstOrDefault(p => p.UserId.ToString() !=
                     AuthClient.CurrentUser?.Id.ToString());
                     if (other == null) continue;
-
-                    <button class="message">
-                        <div class="profile-image" @onclick="() => OpenConversation(convo.Id)">
-                            <img src="@GetAvatar(other.AvatarUrl)" alt="Profile Icon" width="50px" />
+                    <button class="message @(ActiveConversationId == convo.Id ? "active" : "")"
+                        @onclick="() => OpenConversation(convo.Id)">
+                        <div class="profile-image">
+                            <img class="profile-avatar" src="@GetAvatar(other.AvatarUrl)" alt="Profile Icon" width="50px" />
                         </div>
-                        <p @onclick="() => OpenConversation(convo.Id)">@other.Name</p>
+                        <p>@other.Name</p>
                     </button>
                 }
             }
@@ -34,9 +34,10 @@
             {
                 @foreach (var troupe in Troupes)
                 {
-                    <button class="message" @onclick="() => OpenTroupe(troupe.Id)">
+                    <button class="message @(ActiveTroupeId == troupe.Id ? "active" : "")"
+                        @onclick="() => OpenTroupe(troupe.Id)">
                         <div class="profile-image">
-                            <img src="@GetAvatar(troupe.AvatarUrl)" alt="Troupe Icon" width="50px" />
+                            <img class="profile-avatar" src="@TroupeAvatar(troupe.AvatarUrl)" alt="Troupe Icon" width="50px" />
                         </div>
                         <p>@troupe.Name</p>
                     </button>
@@ -58,6 +59,9 @@
 
     private bool hasRendered = false;
 
+    private Guid? ActiveConversationId { get; set; }
+    private Guid? ActiveTroupeId { get; set; }
+
     private void NavigateToCreate()
     {
         var target = IsChatsPage ? "/chats/create" : "/troupes/create";
@@ -66,14 +70,15 @@
 
     private void OpenConversation(Guid conversationId)
     {
+        ActiveConversationId = conversationId;
         NavigationManager.NavigateTo($"/chats/{conversationId}");
     }
 
     private void OpenTroupe(Guid troupeId)
     {
+        ActiveTroupeId = troupeId;
         NavigationManager.NavigateTo($"/troupes/{troupeId}");
     }
-
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !hasRendered)
@@ -110,6 +115,34 @@
         var uri = NavigationManager.Uri.ToLower();
         IsChatsPage = uri.Contains("/chats");
         IsSettings = uri.Contains("/settings");
+
+        // Detect active conversation
+        if (IsChatsPage)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(uri, @"/chats/([a-f0-9\\-]+)");
+            if (match.Success && Guid.TryParse(match.Groups[1].Value, out var convoId))
+            {
+                ActiveConversationId = convoId;
+            }
+            else
+            {
+                ActiveConversationId = null;
+            }
+            ActiveTroupeId = null;
+        }
+        else
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(uri, @"/troupes/([a-f0-9\\-]+)");
+            if (match.Success && Guid.TryParse(match.Groups[1].Value, out var troupeId))
+            {
+                ActiveTroupeId = troupeId;
+            }
+            else
+            {
+                ActiveTroupeId = null;
+            }
+            ActiveConversationId = null;
+        }
     }
 
     private async Task LoadSidebarData()
@@ -139,6 +172,7 @@
     }
 
     private string GetAvatar(string? url) => string.IsNullOrWhiteSpace(url) ? "images/Profile.svg" : url;
+    private string TroupeAvatar(string? url) => string.IsNullOrWhiteSpace(url) ? "images/Troupe-chat.svg" : url;
 
     public void Dispose()
     {

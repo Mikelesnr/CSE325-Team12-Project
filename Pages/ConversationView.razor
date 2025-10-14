@@ -5,37 +5,61 @@
 @inject HttpClient Http
 @inject AuthClientService AuthClient
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
-<h3 class="text-center mt-4">@otherParticipant?.Name</h3>
-
-@if (conversation != null)
-{
-    <div class="chat-box d-flex flex-column"
-        style="height: 100vh; width: 100%; padding: 20px; overflow-y: auto; background-color: #f5f5f5;">
-        <div class="chat-messages mb-3" style="flex-grow: 1; overflow-y: auto;">
-            @foreach (var msg in chatMessages.OrderBy(m => m.CreatedAt))
-            {
-                var isMine = msg.SenderId == AuthClient.CurrentUser?.Id;
-                <div class="chat-bubble @(isMine ? "mine" : "theirs")">
-                    <div class="chat-content">@msg.Content</div>
-                    <small class="text-muted">@msg.CreatedAt.ToLocalTime().ToString("g")</small>
-                </div>
-            }
-        </div>
-
-        <EditForm Model="@newMessage" OnValidSubmit="@SendMessage">
-            <InputTextArea class="form-control mb-2" @bind-Value="newMessage.Content" rows="3"
-                placeholder="Type your message..." />
-            <div class="d-flex justify-content-center">
-                <button class="btn btn-success px-5" type="submit" disabled="@isSending">Send</button>
+<div class="chat-box">
+    <div class="chat-header">
+        <div class="d-flex align-items-center gap-3">
+            <img src="@GetAvatar(otherParticipant?.AvatarUrl)" alt="Profile Icon" width="50px" />
+            <div>
+                <h3 class="conversation-name">
+                    @(otherParticipant != null ? otherParticipant.Name : "Loading user...")
+                </h3>
+                <p class="text-muted user-email">@(otherParticipant != null ? otherParticipant.Email : "Loading email...")</p>
             </div>
-        </EditForm>
+        </div>
+        <button class="options-button">⋮</button>
     </div>
-}
-else
-{
-    <p class="text-center mt-5">Loading conversation...</p>
-}
+
+    @if (conversation != null)
+    {
+        <div class="chat-body">
+            <div class="chat-messages" @ref="chatMessagesRef">
+                @foreach (var msg in chatMessages.OrderBy(m => m.CreatedAt))
+                {
+                    var isMine = msg.SenderId == AuthClient.CurrentUser?.Id;
+                    <div class="chat-bubble @(isMine ? "mine" : "theirs")">
+                        <div class="chat-content">@msg.Content</div>
+                        <small class="text-muted">@msg.CreatedAt.ToLocalTime().ToString("g")</small>
+                    </div>
+                }
+            </div>
+
+            <div class="chat-input">
+                <EditForm Model="@newMessage" OnValidSubmit="@SendMessage">
+                    <InputTextArea class="text-area"
+                        @bind-Value="newMessage.Content"
+                        rows="1"
+                        placeholder="Type your message..."
+                        @onkeydown="HandleKeyDown" />
+                <div class="d-flex justify-content-center">
+                    <button class="btn btn-primary" type="submit" disabled="@isSending">Send</button>
+                </div>
+            </EditForm>
+            
+            </div>
+
+
+        </div>
+    }
+    else
+    {
+        <p class="text-center mt-5">Loading conversation...</p>
+    }
+
+</div>
+
+
 
 @code {
     [Parameter] public Guid ConversationId { get; set; }
@@ -44,10 +68,14 @@ else
     private List<MessageDto> chatMessages = new();
     private bool isSending = false;
     private bool hasRendered = false;
-    private UserDto? otherParticipant;
+
+    private ConversationParticipantDto? otherParticipant;
 
     private MessageRequest newMessage = new();
     private HubConnection? hubConnection;
+    private ElementReference chatMessagesRef;
+
+    private string GetAvatar(string? url) => string.IsNullOrWhiteSpace(url) ? "images/Profile.svg" : url;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -56,9 +84,22 @@ else
             hasRendered = true;
 
             var restored = await AuthClient.RestoreSessionAsync();
-            if (!restored || AuthClient.CurrentUser == null)
+            if (!restored)
             {
                 Console.WriteLine("❌ Unable to restore session.");
+                return;
+            }
+
+            
+            int attempts = 0;
+            while (AuthClient.CurrentUser == null && attempts < 10)
+            {
+                await Task.Delay(200);
+                attempts++;
+            }
+            if (AuthClient.CurrentUser == null)
+            {
+                Console.WriteLine("❌ Current user not available after waiting.");
                 return;
             }
 
@@ -72,6 +113,14 @@ else
 
             StateHasChanged();
         }
+
+        // Scroll al final después de renderizar
+        await ScrollToBottomAsync();
+    }
+
+    private async Task ScrollToBottomAsync()
+    {
+        await JS.InvokeVoidAsync("scrollToBottom", chatMessagesRef);
     }
 
     private async Task LoadConversation()
@@ -80,9 +129,7 @@ else
         {
             conversation = await Http.GetFromJsonAsync<ConversationDto>($"/api/Conversations/{ConversationId}");
             chatMessages = conversation?.Messages.OrderBy(m => m.CreatedAt).ToList() ?? new();
-
-            otherParticipant = conversation?.Participants
-            .FirstOrDefault(p => p.Id != AuthClient.CurrentUser?.Id);
+            otherParticipant = conversation?.OtherParticipant;
         }
         catch (HttpRequestException ex)
         {
@@ -99,13 +146,14 @@ else
         .Build();
 
         // 🔄 SignalR Listener: Refresh UI only if incoming message matches current conversation
-        hubConnection.On<MessageDto>("ReceiveDirectMessage", msg =>
+        hubConnection.On<MessageDto>("ReceiveDirectMessage", async msg =>
         {
             if (msg.ConversationId == ConversationId)
             {
                 chatMessages.Add(msg);
                 chatMessages = chatMessages.OrderBy(m => m.CreatedAt).ToList();
-                InvokeAsync(StateHasChanged);
+                await InvokeAsync(StateHasChanged);
+                await InvokeAsync(ScrollToBottomAsync);
             }
         });
 
@@ -126,8 +174,9 @@ else
             Console.Error.WriteLine($"❌ Message send failed: {response.StatusCode} - {error}");
         }
 
-        newMessage.Content = string.Empty;
-        isSending = false;
+    newMessage.Content = string.Empty;
+    isSending = false;
+    await ScrollToBottomAsync();
     }
 
     public async ValueTask DisposeAsync()
@@ -139,6 +188,43 @@ else
         }
     }
 
+    protected override async Task OnParametersSetAsync()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.SendAsync("LeaveConversation", ConversationId.ToString());
+            await hubConnection.DisposeAsync();
+            hubConnection = null;
+        }
+
+        await LoadConversation();
+
+        if (AuthClient.CurrentUser != null)
+        {
+            newMessage.ConversationId = ConversationId;
+            newMessage.TroupeId = null;
+            newMessage.SenderId = AuthClient.CurrentUser.Id;
+
+            await InitializeSignalR();
+        }
+        else
+        {
+            Console.Error.WriteLine("❌ Usuario no autenticado. No se puede inicializar la conversación.");
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey && !string.IsNullOrWhiteSpace(newMessage.Content))
+        {
+            
+            await JS.InvokeVoidAsync("eval", "event.preventDefault();");
+            await SendMessage();
+        }
+    }
+
     public class MessageRequest
     {
         public Guid SenderId { get; set; }
@@ -147,13 +233,4 @@ else
         public Guid? ConversationId { get; set; }
     }
 
-    public class ConversationDto
-    {
-        public Guid Id { get; set; }
-        public Guid CreatedBy { get; set; }
-        public bool IsGroup { get; set; }
-        public DateTime CreatedAt { get; set; }
-        public List<UserDto> Participants { get; set; } = new();
-        public List<MessageDto> Messages { get; set; } = new();
-    }
 }

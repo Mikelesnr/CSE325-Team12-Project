@@ -102,12 +102,18 @@ namespace CSE325_Team12_Project.Controllers
             try
             {
                 var conversation = await _context.Conversations
-                    .Include(c => c.Participants).ThenInclude(p => p.User)
+                    .Include(c => c.Participants)
+                        .ThenInclude(p => p.User)
                     .Include(c => c.Messages)
                     .FirstOrDefaultAsync(c => c.Id == id);
 
                 if (conversation == null)
                     return NotFound();
+
+
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var currentUserId))
+                    return Unauthorized();
 
                 var dto = new ConversationDto
                 {
@@ -134,6 +140,9 @@ namespace CSE325_Team12_Project.Controllers
                             CreatedAt = m.CreatedAt
                         }).ToList()
                 };
+
+
+                dto.OtherParticipant = dto.Participants.FirstOrDefault(p => p.UserId != currentUserId);
 
                 return Ok(dto);
             }

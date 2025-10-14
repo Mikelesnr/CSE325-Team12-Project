@@ -3,15 +3,17 @@
 @inject HttpClient Http
 @inject SidebarUpdateService SidebarUpdate
 
-<div class="d-flex justify-content-center">
-    <h3 class="page-title">🎭 Explore Troupes</h3>
+<div class="page-header">
+    <h3 class="page-title">Explore Troupes</h3>
+    <img src="images/Troupes-icon.svg" alt="Troupes Icon" width="50" height="40" />
 </div>
 
-<!-- 🔍 Search input bound to searchTerm. Triggers filtering on every keystroke -->
-<div class="d-flex justify-content-center">
-    <input class="form-control mb-3" style="max-width: 80%;" placeholder="Search troupes..." @bind="searchTerm"
-        @bind:event="oninput" />
+
+
+<div class="search-bar">
+    <input class="form-control" placeholder="🔍 Search Troupes..." @bind="searchTerm" @bind:event="oninput" />
 </div>
+
 
 
 @if (!ready)
@@ -29,12 +31,30 @@ else
         {
             <div class="troupe-card">
                 <div class="troupe-info">
-                    <h5>@troupe.Name</h5>
-                    <p>@troupe.Description</p>
+                    <div>
+                        <h5>@troupe.Name</h5>
+                        <p class="text-muted">
+                            @if (expandedDescriptionId == troupe.Id)
+                            {
+                                @troupe.Description
+                                <button class="mini-btn" @onclick="() => ToggleDescription(troupe.Id)">Ver menos</button>
+                            }
+                            else if (troupe.Description.Length > 90)
+                            {
+                                @(troupe.Description.Substring(0, 90) + "...")
+                                <button class="mini-btn" @onclick="() => ToggleDescription(troupe.Id)">Ver más</button>
+                            }
+                            else
+                            {
+                                @troupe.Description
+                            }
+                        </p>
+                    </div>
                     <button class="open-button" @onclick="() => ToggleDetails(troupe.Id)">
                         @(expandedTroupeId == troupe.Id ? "Hide Details" : "View Details")
                     </button>
                 </div>
+
 
                 @if (expandedTroupeId == troupe.Id)
                 {
@@ -48,7 +68,11 @@ else
             </div>
         }
     </div>
+
+
 }
+
+
 
 @code {
     private List<TroupeDto> allTroupes = new(); // 🔁 Full list from API
@@ -139,6 +163,13 @@ else
         {
             Console.Error.WriteLine($"❌ Join error: {ex.Message}");
         }
+    }
+
+    private Guid? expandedDescriptionId = null;
+
+    private void ToggleDescription(Guid id)
+    {
+        expandedDescriptionId = expandedDescriptionId == id ? null : id;
     }
 
     // 📦 DTOs for troupe data
