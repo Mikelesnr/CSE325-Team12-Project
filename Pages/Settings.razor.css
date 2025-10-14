@@ -1,0 +1,32 @@
+.settings-container {
+  max-width: 80%;
+  margin: 0 auto;
+  border: 1px solid #cccbcb;
+  border-radius: 0.5rem;
+  background-color: #f9f9f9;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.header {
+  border-bottom: 1px solid #cccbcb;
+  padding: 0.7rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.edit-user,
+.edit-password {
+  padding: 1rem;
+}
+
+.edit-user h4,
+.edit-password h4 {
+  font-size: 1.2rem;
+  margin: 0;
+}
+
+.edit-header {
+  display: flex;
+  align-items: center;
+}

@@ -14,14 +14,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 15px 25px;
+  padding: 10px;
   border-bottom: 1px solid #c0bdbd;
   background-color: #ffffff;
-}
-
-.chat-header div {
-  display: flex;
-  flex-direction: column;
+  z-index: 2;
 }
 
 .chat-body {
@@ -46,9 +42,6 @@
 
 .chat-input form {
   display: flex;
-  gap: 0.5rem;
-  padding: 15px;
-  align-items: center;
 }
 
 .chat-bubble {
@@ -61,22 +54,18 @@
 
 .chat-bubble.mine {
   background-color: #e5eef8;
-  margin-right: 10px;
-  margin-left: auto;
-  text-align: right;
+  align-self: flex-end;
 }
 
 .chat-bubble.theirs {
   background-color: #ffffff;
-  margin-left: 10px;
-  margin-right: auto;
-  text-align: left;
+  align-self: flex-start;
 }
 
 .conversation-name {
   font-size: 1rem;
   font-weight: bold;
-
+  color: #505050;
   margin: 0;
 }
 
@@ -85,17 +74,11 @@
   font-size: 0.8rem;
 }
 
-.text-area {
-  flex-grow: 1;
-  border: 1px solid #ccc;
-  border-radius: 0.5rem;
-  padding: 0.5rem;
-  resize: none;
-}
-
-.details-card {
-  background-color: #ffffff;
-
-  padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+.options-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  color: #0d0000;
+  font-weight: bold;
 }
