@@ -5,14 +5,13 @@
 
 <div class="page-header">
     <h3 class="page-title">Explore Troupes</h3>
-    <img src="images/troupes-icon.svg" alt="Troupes Icon" width="50" height="40" />
+    <img src="images/Troupes-icon.svg" alt="Troupes Icon" width="50" height="40" />
 </div>
 
 
 
 <div class="search-bar">
-    <input class="form-control" placeholder="🔍 Search Troupes..." @bind="searchTerm"
-        @bind:event="oninput" />
+    <input class="form-control" placeholder="🔍 Search Troupes..." @bind="searchTerm" @bind:event="oninput" />
 </div>
 
 
@@ -57,7 +56,7 @@ else
                 </div>
 
 
-                 @if (expandedTroupeId == troupe.Id)
+                @if (expandedTroupeId == troupe.Id)
                 {
                     <div class="troupe-details">
                         <p><strong>Created By:</strong> @troupe.CreatedBy?.Name</p>
@@ -65,7 +64,7 @@ else
                         <p><strong>Members:</strong> @troupe.Members.Count</p>
                         <button class="join-button" @onclick="() => JoinTroupe(troupe.Id)">Join Troupe</button>
                     </div>
-                } 
+                }
             </div>
         }
     </div>
@@ -166,7 +165,7 @@ else
         }
     }
 
-        private Guid? expandedDescriptionId = null;
+    private Guid? expandedDescriptionId = null;
 
     private void ToggleDescription(Guid id)
     {
