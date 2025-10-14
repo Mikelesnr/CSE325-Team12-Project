@@ -70,6 +70,14 @@
 
 .profile-image {
   border-radius: 50%;
+  aspect-ratio: 1/1;
+}
+
+.profile-avatar {
+  border-radius: 50% !important;
+  width: 50px !important;
+  height: 50px !important;
+  object-fit: cover !important;
 }
 
 .direct-messages {

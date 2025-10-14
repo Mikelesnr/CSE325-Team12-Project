@@ -21,9 +21,10 @@
                     var other = convo.Participants.FirstOrDefault(p => p.UserId.ToString() !=
                     AuthClient.CurrentUser?.Id.ToString());
                     if (other == null) continue;
-                    <button class="message @(ActiveConversationId == convo.Id ? "active" : "")" @onclick="() => OpenConversation(convo.Id)">
+                    <button class="message @(ActiveConversationId == convo.Id ? "active" : "")"
+                        @onclick="() => OpenConversation(convo.Id)">
                         <div class="profile-image">
-                            <img src="@GetAvatar(other.AvatarUrl)" alt="Profile Icon" width="50px" />
+                            <img class="profile-avatar" src="@GetAvatar(other.AvatarUrl)" alt="Profile Icon" width="50px" />
                         </div>
                         <p>@other.Name</p>
                     </button>
@@ -33,9 +34,10 @@
             {
                 @foreach (var troupe in Troupes)
                 {
-                    <button class="message @(ActiveTroupeId == troupe.Id ? "active" : "")" @onclick="() => OpenTroupe(troupe.Id)">
+                    <button class="message @(ActiveTroupeId == troupe.Id ? "active" : "")"
+                        @onclick="() => OpenTroupe(troupe.Id)">
                         <div class="profile-image">
-                            <img src="@GetAvatar(troupe.AvatarUrl)" alt="Troupe Icon" width="50px" />
+                            <img class="profile-avatar" src="@TroupeAvatar(troupe.AvatarUrl)" alt="Troupe Icon" width="50px" />
                         </div>
                         <p>@troupe.Name</p>
                     </button>
@@ -170,6 +172,7 @@
     }
 
     private string GetAvatar(string? url) => string.IsNullOrWhiteSpace(url) ? "images/Profile.svg" : url;
+    private string TroupeAvatar(string? url) => string.IsNullOrWhiteSpace(url) ? "images/Troupes-icon.svg" : url;
 
     public void Dispose()
     {
