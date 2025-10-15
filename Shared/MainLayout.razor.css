@@ -164,7 +164,6 @@ main {
   box-shadow: -2px 0px 15px rgba(0, 0, 0, 0.2);
   overflow-y: auto;
   transition: transform 0.3s ease;
-  background: none;
 }
 
 /* Optional: hide on desktop */
