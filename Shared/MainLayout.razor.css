@@ -18,7 +18,7 @@ main {
   box-shadow: 2px 0px 10px -5px rgba(0, 0, 0, 0.1);
   width: 100px;
   height: 100vh;
-
+  z-index: 1000;
   top: 0;
   transition: transform 0.3s ease;
 }
@@ -28,6 +28,7 @@ main {
   background-color: transparent;
   border: none;
   cursor: pointer;
+  display: none;
 }
 
 .hamTopButtom {
@@ -101,8 +102,10 @@ main {
 
   /* Ocultar botones en escritorio */
   .hamTopButtom,
-  .hamSideButton {
+  .hamSideButton,
+  .AsideToggleButton {
     display: none;
+    background-image: none;
   }
 
   .top-row {
@@ -137,7 +140,55 @@ main {
   }
 
   .hamTopButtom,
-  .hamSideButton {
+  .hamSideButton,
+  .HamButton {
     display: block; /* visibles en móvil */
   }
+  .top-buttons {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+}
+
+.asidebar-container {
+  position: fixed;
+  top: 2.8rem; /* match .top-row height */
+  right: 0;
+  width: 60%;
+  max-width: 280px;
+  height: calc(100vh - 2.8rem); /* avoid overlapping top nav */
+  background-color: var(--secondary-color);
+  z-index: 500;
+  box-shadow: -2px 0px 15px rgba(0, 0, 0, 0.2);
+  overflow-y: auto;
+  transition: transform 0.3s ease;
+  background: none;
+}
+
+/* Optional: hide on desktop */
+@media (min-width: 641px) {
+  .asidebar-container {
+    position: relative;
+    top: 0;
+    height: auto;
+    box-shadow: none;
+    width: 250px;
+  }
+}
+
+.AsideToggleButton {
+  background: none;
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 0.5rem;
+  line-height: 1;
+}
+
+.dots img {
+  height: 2.5rem;
+  vertical-align: middle;
 }

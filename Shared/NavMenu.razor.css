@@ -37,3 +37,33 @@
   box-shadow: 3px 6px 25px -5px rgba(0, 0, 0, 0.1),
     -2px -8px 10px -5px rgba(0, 0, 0, 0.04);
 }
+
+.nav-container {
+  padding: 0 1rem;
+}
+
+.logo-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid #ccc;
+  padding: 10px 0;
+  margin-bottom: 20px;
+}
+
+.sidebar-toggle-nav {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: var(--primary-color);
+  cursor: pointer;
+  display: none;
+}
+
+/* Show toggle only on mobile */
+@media (max-width: 768px) {
+  .sidebar-toggle-nav {
+    display: inline-block;
+  }
+}

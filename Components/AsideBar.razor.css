@@ -1,3 +1,4 @@
+/* Desktop sidebar styles */
 .asidebar {
   background-color: var(--secondary-color);
   width: 250px;
@@ -5,9 +6,9 @@
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  display: hidden;
 }
 
+/* Route-based visibility */
 .visible {
   display: flex;
 }
@@ -16,6 +17,28 @@
   display: none;
 }
 
+/* Mobile overlay behavior */
+@media (max-width: 768px) {
+  .asidebar {
+    position: fixed;
+    /* top: 0; */
+    left: 0;
+    height: 100%;
+    width: 100%;
+    max-width: 280px;
+    transition: transform 0.3s ease;
+  }
+
+  .asidebar.collapsed {
+    transform: translateX(-100%);
+  }
+
+  .asidebar.expanded {
+    transform: translateX(0);
+  }
+}
+
+/* Sidebar content */
 .button-container {
   padding: 1rem;
   border-bottom: 1px solid var(--contrast-color);
@@ -45,8 +68,6 @@
   width: 93%;
   padding: 5px 0;
   padding-left: 15px;
-  /* border: 1px solid var(--contrast-color); */
-  /* border-radius: 0.5rem; */
   background-color: none;
 }
 

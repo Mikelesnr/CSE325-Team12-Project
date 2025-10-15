@@ -4,7 +4,7 @@
 @inject AuthClientService AuthClient
 @inject SidebarUpdateService SidebarUpdate
 
-<aside class="asidebar @(Settings)">
+<aside class="asidebar @(Settings) @(IsSidebarVisible ? "expanded" : "collapsed")">
     <div class="button-container">
         <Button Variant="ButtonVariant.Primary" Size="ButtonSize.Medium" OnClick="@NavigateToCreate">
             @(IsChatsPage ? "Start a new conversation" : "Create a new troupe")
@@ -47,20 +47,26 @@
     </div>
 </aside>
 
+
 @code {
     private string Title => IsChatsPage ? "Direct Messages" : "Troupes";
     private string Settings => !IsSettings ? "visible" : "hidden";
 
     private bool IsChatsPage = false;
     private bool IsSettings = false;
+    private bool IsSidebarVisible = true;
 
     public List<ConversationDto> Conversations { get; private set; } = new();
     public List<TroupeDto> Troupes { get; private set; } = new();
 
     private bool hasRendered = false;
-
     private Guid? ActiveConversationId { get; set; }
     private Guid? ActiveTroupeId { get; set; }
+
+    private void ToggleSidebar()
+    {
+        IsSidebarVisible = !IsSidebarVisible;
+    }
 
     private void NavigateToCreate()
     {
@@ -79,6 +85,7 @@
         ActiveTroupeId = troupeId;
         NavigationManager.NavigateTo($"/troupes/{troupeId}");
     }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && !hasRendered)
@@ -116,31 +123,16 @@
         IsChatsPage = uri.Contains("/chats");
         IsSettings = uri.Contains("/settings");
 
-        // Detect active conversation
         if (IsChatsPage)
         {
             var match = System.Text.RegularExpressions.Regex.Match(uri, @"/chats/([a-f0-9\\-]+)");
-            if (match.Success && Guid.TryParse(match.Groups[1].Value, out var convoId))
-            {
-                ActiveConversationId = convoId;
-            }
-            else
-            {
-                ActiveConversationId = null;
-            }
+            ActiveConversationId = match.Success && Guid.TryParse(match.Groups[1].Value, out var convoId) ? convoId : null;
             ActiveTroupeId = null;
         }
         else
         {
             var match = System.Text.RegularExpressions.Regex.Match(uri, @"/troupes/([a-f0-9\\-]+)");
-            if (match.Success && Guid.TryParse(match.Groups[1].Value, out var troupeId))
-            {
-                ActiveTroupeId = troupeId;
-            }
-            else
-            {
-                ActiveTroupeId = null;
-            }
+            ActiveTroupeId = match.Success && Guid.TryParse(match.Groups[1].Value, out var troupeId) ? troupeId : null;
             ActiveConversationId = null;
         }
     }
