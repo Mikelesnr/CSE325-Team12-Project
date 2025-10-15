@@ -1,17 +1,23 @@
 ﻿@inherits LayoutComponentBase
 
-
 <div class="page">
     <div class="overlay @(isSidebarOpen ? "active" : "")" @onclick="CloseSidebar"></div>
-    <div class="sidebar  @(isSidebarOpen ? "open" : "closed")">
 
-
+    <div class="sidebar @(isSidebarOpen ? "open" : "closed")">
         <NavMenu />
     </div>
 
     <main>
         <div class="top-row px-4">
-            <button class="HamButton hamTopButtom" @onclick="ToggleSidebar">&#9776</button>
+            <!-- Sidebar and Aside toggles -->
+            <div class="top-buttons">
+                <button class="HamButton hamTopButton" @onclick="ToggleSidebar">&#9776;</button>
+                <button class="AsideToggleButton" @onclick="ToggleAside">
+                    <span class="dots"><img src="images/dropdown.svg" alt="Vertical Dots" /></span>
+                    <!-- vertical dots -->
+                </button>
+            </div>
+
             <div class="top-nav">
                 <a href="#" @onclick:preventDefault="true">
                     <img src="images/Notification.svg" alt="Logo" height="35px" />
@@ -20,26 +26,31 @@
                     Log out
                 </Button>
             </div>
-
         </div>
 
         <div class="main-content">
-            <AsideBar />
+            @if (isAsideOpen)
+            {
+                <div class="asidebar-container">
+                    <AsideBar />
+                </div>
+            }
             <div class="body-content">
                 @Body
             </div>
         </div>
-
-
     </main>
 </div>
+
 @inject NavigationManager Navigation
 @inject AuthStateService AuthState
 
 @code {
     private bool isSidebarOpen = false;
+    private bool isAsideOpen = true;
 
     private void ToggleSidebar() => isSidebarOpen = !isSidebarOpen;
+    private void ToggleAside() => isAsideOpen = !isAsideOpen;
 
     private void CloseSidebar(Microsoft.AspNetCore.Components.Web.MouseEventArgs e) => isSidebarOpen = false;
 
