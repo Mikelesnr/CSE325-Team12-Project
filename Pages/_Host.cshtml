@@ -26,14 +26,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@700&display=swap" rel="stylesheet">
     <component type="typeof(HeadOutlet)" render-mode="ServerPrerendered" />
-    <script>
+    <script defer>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/service-worker.js')
                 .then(reg => console.log('Service Worker registered', reg))
                 .catch(err => console.error('Service Worker registration failed', err));
         }
     </script>
-    <script src="install-prompt.js"></script>
 
 </head>
 
@@ -56,7 +55,7 @@
     <button id="installBtn" style="display:none; position:fixed; bottom:20px; right:20px; z-index:1000;">
         📱 Install TroupeChat
     </button>
-    <script src="~/install-prompt.js"></script>
+    <script src="install-prompt.js"></script>
 
     <script src="js/scrollToBottom.js"></script>
 </body>
