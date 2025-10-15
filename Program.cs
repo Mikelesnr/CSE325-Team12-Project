@@ -1,11 +1,19 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.EntityFrameworkCore;
-using CSE325_Team12_Project.Data;
-using CSE325_Team12_Project.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Blazored.LocalStorage;
+using CSE325_Team12_Project.Data;
+using CSE325_Team12_Project.Services;
+using CSE325_Team12_Project.Hubs;
+using Microsoft.AspNetCore.Components.Server.Circuits; // ✅ Added for 
+using DotNetEnv; // ✅ Added for environment variable loading
+
+Env.Load();
+
+string? connectionString = Environment.GetEnvironmentVariable("SUPABASE_CONNECTION_STRING");
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,8 +27,7 @@ if (string.IsNullOrWhiteSpace(jwtKey) || string.IsNullOrWhiteSpace(jwtIssuer) ||
     throw new InvalidOperationException("JWT configuration is missing or incomplete in appsettings.json.");
 }
 
-// Add services to the container.
-builder.Services.AddScoped<AuthStateService>();
+// ✅ Core framework services
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddControllers().AddJsonOptions(options =>
@@ -29,6 +36,8 @@ builder.Services.AddControllers().AddJsonOptions(options =>
     options.JsonSerializerOptions.WriteIndented = true;
 });
 builder.Services.AddEndpointsApiExplorer();
+
+// ✅ Swagger configuration
 builder.Services.AddSwaggerGen(options =>
 {
     options.AddSecurityDefinition("Bearer", new Microsoft.OpenApi.Models.OpenApiSecurityScheme
@@ -57,12 +66,7 @@ builder.Services.AddSwaggerGen(options =>
     });
 });
 
-builder.Services.AddScoped<IConversationService, ConversationService>();
-// Add Entity Framework
-builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
-
-// Add Authentication
+// ✅ Authentication & Authorization
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -77,11 +81,9 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
     });
-
-// Add Authorization
 builder.Services.AddAuthorization();
 
-// Add CORS
+// ✅ CORS
 builder.Services.AddCors(options =>
 {
     options.AddDefaultPolicy(policy =>
@@ -92,18 +94,44 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add custom services
+// ✅ Entity Framework
+// builder.Services.AddDbContext<ApplicationDbContext>(options =>
+//     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseNpgsql(connectionString));
+
+// ✅ SignalR
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true;
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(60);
+});
+
+// ✅ Local Storage
+builder.Services.AddBlazoredLocalStorage();
+
+// ✅ Custom services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPasswordHasher, PasswordHasher>();
+builder.Services.AddScoped<IConversationService, ConversationService>();
+builder.Services.AddScoped<AuthStateService>();
+builder.Services.AddSingleton<SidebarUpdateService>();
+builder.Services.AddScoped<AuthClientService>();
+
+// ✅ SignalR client and circuit tracking
+builder.Services.AddScoped<CircuitHandler, ConnectionTracker>(); // ✅ Tracks Blazor connection state
+builder.Services.AddScoped<SignalRClientService>(); // ✅ Optional: for client-side SignalR integration
+
+// ✅ HttpClient with NavigationManager
 builder.Services.AddScoped<HttpClient>(sp =>
 {
     var navigationManager = sp.GetRequiredService<NavigationManager>();
     return new HttpClient { BaseAddress = new Uri(navigationManager.BaseUri) };
 });
-builder.Services.AddScoped<AuthClientService>();
 
+// ✅ Build and run
 WebApplication app;
-
 try
 {
     app = builder.Build();
@@ -114,7 +142,7 @@ catch (Exception ex)
     throw;
 }
 
-// Configure the HTTP request pipeline.
+// ✅ Middleware pipeline
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
@@ -139,6 +167,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+app.MapHub<ChatHub>("/chathub");
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
 

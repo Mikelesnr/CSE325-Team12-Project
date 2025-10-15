@@ -9,5 +9,6 @@ namespace CSE325_Team12_Project.Models.DTOs
 
         public List<ConversationParticipantDto> Participants { get; set; } = new();
         public List<MessageDto> Messages { get; set; } = new();
+        public ConversationParticipantDto? OtherParticipant { get; set; }
     }
 }

@@ -1,1 +1,202 @@
 @page "/troupes"
+@inject AuthClientService AuthClient
+@inject HttpClient Http
+@inject SidebarUpdateService SidebarUpdate
+
+<div class="page-header">
+    <h3 class="page-title">Explore Troupes</h3>
+    <img src="images/Troupes-icon.svg" alt="Troupes Icon" width="50" height="40" />
+</div>
+
+
+
+<div class="search-bar">
+    <input class="form-control" placeholder="🔍 Search Troupes..." @bind="searchTerm" @bind:event="oninput" />
+</div>
+
+
+
+@if (!ready)
+{
+    <p class="loading-text">Loading troupes...</p>
+}
+else if (filteredTroupes.Count == 0)
+{
+    <p class="empty-text">No troupes match your search.</p>
+}
+else
+{
+    <div class="troupe-grid">
+        @foreach (var troupe in filteredTroupes)
+        {
+            <div class="troupe-card">
+                <div class="troupe-info">
+                    <div>
+                        <h5>@troupe.Name</h5>
+                        <p class="text-muted">
+                            @if (expandedDescriptionId == troupe.Id)
+                            {
+                                @troupe.Description
+                                <button class="mini-btn" @onclick="() => ToggleDescription(troupe.Id)">Ver menos</button>
+                            }
+                            else if (troupe.Description.Length > 90)
+                            {
+                                @(troupe.Description.Substring(0, 90) + "...")
+                                <button class="mini-btn" @onclick="() => ToggleDescription(troupe.Id)">Ver más</button>
+                            }
+                            else
+                            {
+                                @troupe.Description
+                            }
+                        </p>
+                    </div>
+                    <button class="open-button" @onclick="() => ToggleDetails(troupe.Id)">
+                        @(expandedTroupeId == troupe.Id ? "Hide Details" : "View Details")
+                    </button>
+                </div>
+
+
+                @if (expandedTroupeId == troupe.Id)
+                {
+                    <div class="troupe-details">
+                        <p><strong>Created By:</strong> @troupe.CreatedBy?.Name</p>
+                        <p><strong>Created At:</strong> @troupe.CreatedAt.ToLocalTime().ToString("f")</p>
+                        <p><strong>Members:</strong> @troupe.Members.Count</p>
+                        <button class="join-button" @onclick="() => JoinTroupe(troupe.Id)">Join Troupe</button>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+
+}
+
+
+
+@code {
+    private List<TroupeDto> allTroupes = new(); // 🔁 Full list from API
+    private List<TroupeDto> filteredTroupes = new(); // 🔍 Filtered list shown in UI
+    private string searchTerm
+    {
+        get => _searchTerm;
+        set
+        {
+            _searchTerm = value;
+            ApplyFilter(); // ✅ Trigger filtering on every input
+        }
+    }
+    private string _searchTerm = string.Empty;
+
+    private Guid? expandedTroupeId = null;
+    private bool ready = false;
+    private bool hasRendered = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasRendered)
+        {
+            hasRendered = true;
+
+            var restored = await AuthClient.RestoreSessionAsync();
+            if (!restored || AuthClient.CurrentUser == null)
+            {
+                Console.WriteLine("❌ Unable to restore session.");
+                return;
+            }
+
+            try
+            {
+                // 🌐 Fetch all troupes from API
+                allTroupes = await Http.GetFromJsonAsync<List<TroupeDto>>("/api/Troupe") ?? new();
+                ApplyFilter(); // 🔍 Apply initial filter (empty search shows all)
+            }
+            catch (Exception ex)
+            {
+                Console.Error.WriteLine($"❌ Failed to load troupes: {ex.Message}");
+            }
+
+            ready = true;
+            StateHasChanged(); // ✅ Refresh UI after loading
+        }
+    }
+
+    // 🔍 Filters allTroupes based on searchTerm (case-insensitive)
+    private void ApplyFilter()
+    {
+        filteredTroupes = string.IsNullOrWhiteSpace(searchTerm)
+        ? allTroupes
+        : allTroupes
+        .Where(t => t.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+    }
+
+    // 🔁 Toggle expanded view for a troupe card
+    private void ToggleDetails(Guid id)
+    {
+        expandedTroupeId = expandedTroupeId == id ? null : id;
+    }
+
+    // ✅ Join a troupe and notify sidebar to refresh
+    private async Task JoinTroupe(Guid troupeId)
+    {
+        var payload = new
+        {
+            userId = AuthClient.CurrentUser?.Id,
+            troupeId = troupeId
+        };
+
+        try
+        {
+            var response = await Http.PostAsJsonAsync("/api/Membership/join", payload);
+            if (response.IsSuccessStatusCode)
+            {
+                Console.WriteLine("✅ Joined troupe successfully.");
+                SidebarUpdate?.NotifyTroupeJoined(); // 🔔 Notify sidebar to refresh
+            }
+            else
+            {
+                Console.WriteLine("❌ Failed to join troupe.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"❌ Join error: {ex.Message}");
+        }
+    }
+
+    private Guid? expandedDescriptionId = null;
+
+    private void ToggleDescription(Guid id)
+    {
+        expandedDescriptionId = expandedDescriptionId == id ? null : id;
+    }
+
+    // 📦 DTOs for troupe data
+    private class TroupeDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public int Visibility { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string? AvatarUrl { get; set; }
+        public CreatorDto? CreatedBy { get; set; }
+        public List<MemberDto> Members { get; set; } = new();
+    }
+
+    private class CreatorDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string? AvatarUrl { get; set; }
+    }
+
+    private class MemberDto
+    {
+        public Guid UserId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public DateTime JoinedAt { get; set; }
+    }
+}

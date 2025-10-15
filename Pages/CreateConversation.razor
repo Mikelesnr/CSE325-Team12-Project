@@ -1,0 +1,141 @@
+@page "/chats/create"
+@inject HttpClient Http
+@inject NavigationManager Navigation
+@inject AuthClientService AuthClient
+
+<h3 class="text-center mt-4 mb-4">Start a Conversation</h3>
+
+<div class="search-bar">
+    <input class="form-control" placeholder="🔍 Search users..." value="@searchTerm" @oninput="OnSearchChanged" />
+</div>
+
+@if (filteredUsers.Count == 0)
+{
+    <p class="text-center text-muted">No users found.</p>
+}
+else
+{
+    
+    <div class="suggested-users">
+        <h4 class="text-muted">Suggested Users:</h4>
+        @foreach (var user in filteredUsers)
+        {
+            <button class="user-suggestion"
+                @onclick="() => StartConversation(user.Id)">
+                <div class="user-info">
+                    <strong>@user.Name</strong>
+                    <small class="text-muted">@user.Email</small>
+                </div>
+                <span class="btn btn-primary">Chat</span>
+            </button>
+        }
+    </div>
+}
+
+@code {
+    private List<UserDto> allUsers = new();
+    private List<UserDto> filteredUsers = new();
+    private List<ConversationDto> myConversations = new();
+    private string searchTerm = string.Empty;
+    private bool hasRendered = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasRendered)
+        {
+            hasRendered = true;
+
+            var restored = await AuthClient.RestoreSessionAsync();
+            if (!restored || AuthClient.CurrentUser == null)
+            {
+                Console.WriteLine("❌ Unable to restore session.");
+                return;
+            }
+
+            var currentUserId = AuthClient.CurrentUser.Id.ToString();
+
+            var users = await Http.GetFromJsonAsync<List<UserDto>>("/api/User");
+            allUsers = users?.Where(u => u.Id != currentUserId).ToList() ?? new();
+            ApplyFilter();
+
+            myConversations = await Http.GetFromJsonAsync<List<ConversationDto>>("/api/conversations/mine");
+
+            StateHasChanged();
+        }
+    }
+
+    private async Task StartConversation(string userId)
+    {
+        var existing = myConversations.FirstOrDefault(c =>
+        !c.IsGroup &&
+        c.Participants.Count == 2 &&
+        c.Participants.Any(p => p.UserId.ToString() == userId));
+
+        if (existing != null)
+        {
+            Navigation.NavigateTo($"/chats/{existing.Id}");
+            return;
+        }
+
+        var request = new StartConversationRequest
+        {
+            UserIds = new List<string> { userId }
+        };
+
+        var response = await Http.PostAsJsonAsync("/api/conversations/start", request);
+        if (response.IsSuccessStatusCode)
+        {
+            var result = await response.Content.ReadFromJsonAsync<StartConversationResponse>();
+            if (result != null)
+            {
+                Navigation.NavigateTo($"/chats/{result.Id}");
+            }
+        }
+    }
+
+    private void OnSearchChanged(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? string.Empty;
+        ApplyFilter();
+    }
+
+
+    private void ApplyFilter()
+    {
+        filteredUsers = allUsers
+        .Where(u => u.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+        u.Email.Contains(searchTerm, StringComparison.OrdinalIgnoreCase))
+        .ToList();
+    }
+
+    public class StartConversationRequest
+    {
+        public List<string> UserIds { get; set; } = new();
+    }
+
+    public class StartConversationResponse
+    {
+        public Guid Id { get; set; }
+    }
+
+    public class UserDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
+
+    public class ConversationDto
+    {
+        public Guid Id { get; set; }
+        public bool IsGroup { get; set; }
+        public List<ParticipantDto> Participants { get; set; } = new();
+    }
+
+    public class ParticipantDto
+    {
+        public Guid UserId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+    }
+}

@@ -29,59 +29,66 @@ namespace CSE325_Team12_Project.Controllers
         {
             try
             {
-                // Get current user ID from claims
                 var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
                 if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var currentUserId))
                     return Unauthorized();
 
-                // Validate second participant
                 if (request.UserIds == null || request.UserIds.Count != 1)
                     return BadRequest(new { message = "You must specify exactly one other participant." });
 
                 var secondUserId = request.UserIds.First();
 
-                // Ensure distinct users
                 if (secondUserId == currentUserId)
                     return BadRequest(new { message = "You cannot start a conversation with yourself." });
 
-                // Create conversation with both participants
-                var conversation = new Conversation
-                {
-                    Id = Guid.NewGuid(),
-                    CreatedBy = currentUserId,
-                    CreatedAt = DateTime.UtcNow,
-                    IsGroup = false,
-                    Participants = new List<ConversationParticipant>
-            {
-                new ConversationParticipant
-                {
-                    ConversationId = Guid.Empty, // will be set below
-                    UserId = currentUserId,
-                    JoinedAt = DateTime.UtcNow
-                },
-                new ConversationParticipant
-                {
-                    ConversationId = Guid.Empty, // will be set below
-                    UserId = secondUserId,
-                    JoinedAt = DateTime.UtcNow
-                }
-            }
-                };
-
-                // Assign ConversationId to each participant
-                foreach (var participant in conversation.Participants)
-                {
-                    participant.ConversationId = conversation.Id;
-                }
-
-                _context.Conversations.Add(conversation);
-                await _context.SaveChangesAsync();
+                var allUserIds = new List<Guid> { currentUserId, secondUserId };
+                var conversation = await _conversationService.CreateConversationAsync(allUserIds, currentUserId);
 
                 return Ok(new { conversation.Id });
             }
             catch (Exception ex)
             {
                 return StatusCode(500, new { message = "Error creating conversation.", details = ex.Message });
+            }
+        }
+
+        /// <summary>
+        /// Delete a conversation by ID if the current user is a participant.
+        /// </summary>
+        [HttpDelete("{id}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteConversation(Guid id)
+        {
+            try
+            {
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+                    return Unauthorized();
+
+                var conversation = await _context.Conversations
+                    .Include(c => c.Participants)
+                    .Include(c => c.Messages)
+                    .FirstOrDefaultAsync(c => c.Id == id);
+
+                if (conversation == null)
+                    return NotFound(new { message = "Conversation not found." });
+
+                var isParticipant = conversation.Participants.Any(p => p.UserId == userId);
+                if (!isParticipant)
+                    return Forbid();
+
+                // Remove related entities first
+                _context.Messages.RemoveRange(conversation.Messages);
+                _context.ConversationParticipants.RemoveRange(conversation.Participants);
+                _context.Conversations.Remove(conversation);
+
+                await _context.SaveChangesAsync();
+
+                return Ok(new { message = "Conversation deleted successfully." });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error deleting conversation.", details = ex.Message });
             }
         }
 
@@ -95,12 +102,18 @@ namespace CSE325_Team12_Project.Controllers
             try
             {
                 var conversation = await _context.Conversations
-                    .Include(c => c.Participants).ThenInclude(p => p.User)
+                    .Include(c => c.Participants)
+                        .ThenInclude(p => p.User)
                     .Include(c => c.Messages)
                     .FirstOrDefaultAsync(c => c.Id == id);
 
                 if (conversation == null)
                     return NotFound();
+
+
+                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var currentUserId))
+                    return Unauthorized();
 
                 var dto = new ConversationDto
                 {
@@ -127,6 +140,9 @@ namespace CSE325_Team12_Project.Controllers
                             CreatedAt = m.CreatedAt
                         }).ToList()
                 };
+
+
+                dto.OtherParticipant = dto.Participants.FirstOrDefault(p => p.UserId != currentUserId);
 
                 return Ok(dto);
             }

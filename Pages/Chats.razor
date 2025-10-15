@@ -1,0 +1,134 @@
+@page "/chats"
+@inject AuthClientService AuthClient
+@inject HttpClient Http
+@inject NavigationManager Navigation
+
+<div class="page-header">
+    <h3 class="page-title">My Conversations</h3>
+    <img src="images/Chat-icon.svg" alt="Chat Icon" width="50" height="40" />
+</div>
+
+
+@if (!ready)
+{
+    <p class="loading-text">Loading your conversations...</p>
+}
+else if (conversations == null || conversations.Count == 0)
+{
+    <p class="empty-text">You’re not part of any conversations yet.</p>
+}
+else
+{
+    <div class="conversation-grid">
+        @foreach (var convo in conversations)
+        {
+            var other = convo.Participants.FirstOrDefault(p => p.UserId != AuthClient.CurrentUser?.Id);
+            if (other == null) continue;
+
+            <div class="conversation-card">
+                <img src="@GetAvatarUrl(other.AvatarUrl)" class="conversation-avatar" alt="Avatar" />
+                <div class="conversation-info">
+                    <h5>@other.Name</h5>
+                    <p>@other.Email</p>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary" @onclick="() => OpenConversation(convo.Id)">Open</button>
+                        <button class="btn btn-danger" @onclick="() => DeleteConversation(convo.Id)">Delete</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<ConversationDto>? conversations;
+    private bool hasRendered = false;
+    private bool ready = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasRendered)
+        {
+            hasRendered = true;
+
+            var restored = await AuthClient.RestoreSessionAsync();
+            if (!restored || AuthClient.CurrentUser == null)
+            {
+                Console.WriteLine("❌ Unable to restore session.");
+                ready = true;
+                StateHasChanged();
+                return;
+            }
+
+            await LoadConversations();
+        }
+    }
+
+    private async Task LoadConversations()
+    {
+        try
+        {
+            conversations = await Http.GetFromJsonAsync<List<ConversationDto>>("/api/conversations/mine");
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"❌ Failed to load conversations: {ex.Message}");
+            conversations = new();
+        }
+
+        ready = true;
+        StateHasChanged();
+    }
+
+    private void OpenConversation(Guid id)
+    {
+        Navigation.NavigateTo($"/chats/{id}");
+    }
+
+    private async Task DeleteConversation(Guid id)
+    {
+        var response = await Http.DeleteAsync($"/api/conversations/{id}");
+        if (response.IsSuccessStatusCode)
+        {
+            conversations = conversations?.Where(c => c.Id != id).ToList();
+            StateHasChanged();
+        }
+        else
+        {
+            Console.Error.WriteLine($"❌ Failed to delete conversation {id}");
+        }
+    }
+
+    private string GetAvatarUrl(string? avatarUrl)
+    {
+        return string.IsNullOrWhiteSpace(avatarUrl) ? "images/avatar.jpg" : avatarUrl;
+    }
+
+    public class ConversationDto
+    {
+        public Guid Id { get; set; }
+        public Guid CreatedBy { get; set; }
+        public bool IsGroup { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public List<ParticipantDto> Participants { get; set; } = new();
+        public List<MessageDto> Messages { get; set; } = new();
+    }
+
+    public class ParticipantDto
+    {
+        public Guid Id { get; set; }
+        public Guid UserId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string AvatarUrl { get; set; } = string.Empty;
+        public DateTime JoinedAt { get; set; }
+    }
+
+    public class MessageDto
+    {
+        public Guid Id { get; set; }
+        public Guid SenderId { get; set; }
+        public string Content { get; set; } = string.Empty;
+        public DateTime CreatedAt { get; set; }
+    }
+}

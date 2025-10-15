@@ -1,11 +1,12 @@
-@using CSE325_Team12_Project.Models
+@using CSE325_Team12_Project.Models.DTOs
 @inject NavigationManager NavigationManager
-
-
+@inject HttpClient Http
+@inject AuthClientService AuthClient
+@inject SidebarUpdateService SidebarUpdate
 
 <aside class="asidebar @(Settings)">
     <div class="button-container">
-        <Button Variant="ButtonVariant.Primary" Size="ButtonSize.Medium">
+        <Button Variant="ButtonVariant.Primary" Size="ButtonSize.Medium" OnClick="@NavigateToCreate">
             @(IsChatsPage ? "Start a new conversation" : "Create a new troupe")
         </Button>
     </div>
@@ -15,26 +16,31 @@
         <div class="direct-messages">
             @if (IsChatsPage)
             {
-                @foreach (var user in DirectMessages)
+                @foreach (var convo in Conversations)
                 {
-                    <div class="message">
+                    var other = convo.Participants.FirstOrDefault(p => p.UserId.ToString() !=
+                    AuthClient.CurrentUser?.Id.ToString());
+                    if (other == null) continue;
+                    <button class="message @(ActiveConversationId == convo.Id ? "active" : "")"
+                        @onclick="() => OpenConversation(convo.Id)">
                         <div class="profile-image">
-                            <img src="@user.AvatarUrl" alt="Profile Icon" width="50px" />
+                            <img class="profile-avatar" src="@GetAvatar(other.AvatarUrl)" alt="Profile Icon" width="50px" />
                         </div>
-                        <p>@user.Name</p>
-                    </div>
+                        <p>@other.Name</p>
+                    </button>
                 }
             }
             else
             {
                 @foreach (var troupe in Troupes)
                 {
-                    <div class="message">
+                    <button class="message @(ActiveTroupeId == troupe.Id ? "active" : "")"
+                        @onclick="() => OpenTroupe(troupe.Id)">
                         <div class="profile-image">
-                            <img src="@troupe.AvatarUrl" alt="Troupe Icon" width="50px" />
+                            <img class="profile-avatar" src="@TroupeAvatar(troupe.AvatarUrl)" alt="Troupe Icon" width="50px" />
                         </div>
                         <p>@troupe.Name</p>
-                    </div>
+                    </button>
                 }
             }
         </div>
@@ -44,35 +50,153 @@
 @code {
     private string Title => IsChatsPage ? "Direct Messages" : "Troupes";
     private string Settings => !IsSettings ? "visible" : "hidden";
-    private bool IsChatsPage => NavigationManager.Uri.Contains("/chats");
-    private bool IsSettings => NavigationManager.Uri.Contains("/settings");
 
+    private bool IsChatsPage = false;
+    private bool IsSettings = false;
 
-    // Data Simulation, replace with your real services
-    private List<User> DirectMessages = new()
+    public List<ConversationDto> Conversations { get; private set; } = new();
+    public List<TroupeDto> Troupes { get; private set; } = new();
+
+    private bool hasRendered = false;
+
+    private Guid? ActiveConversationId { get; set; }
+    private Guid? ActiveTroupeId { get; set; }
+
+    private void NavigateToCreate()
     {
-        new User { Name = "Alice", AvatarUrl = "images/Profile.svg" },
-        new User { Name = "Bob", AvatarUrl = "images/Profile.svg" }
-    };
-
-    private List<Troupe> Troupes = new()
-    {
-        new Troupe { Name = "CSE325 Team", AvatarUrl = "images/Profile.svg" },
-        new Troupe { Name = "Chess Club", AvatarUrl = "images/Profile.svg" }
-    };
-
-        protected override void OnInitialized()
-    {
-        NavigationManager.LocationChanged += OnLocationChanged;
+        var target = IsChatsPage ? "/chats/create" : "/troupes/create";
+        NavigationManager.NavigateTo(target);
     }
 
-    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    private void OpenConversation(Guid conversationId)
     {
+        ActiveConversationId = conversationId;
+        NavigationManager.NavigateTo($"/chats/{conversationId}");
+    }
+
+    private void OpenTroupe(Guid troupeId)
+    {
+        ActiveTroupeId = troupeId;
+        NavigationManager.NavigateTo($"/troupes/{troupeId}");
+    }
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !hasRendered)
+        {
+            hasRendered = true;
+            NavigationManager.LocationChanged += OnLocationChanged;
+            SidebarUpdate.OnTroupeJoined += HandleTroupeJoined;
+
+            if (!AuthClient.IsAuthenticated)
+            {
+                var restored = await AuthClient.RestoreSessionAsync();
+                if (!restored || AuthClient.CurrentUser == null)
+                {
+                    Console.WriteLine("❌ Unable to restore session.");
+                    return;
+                }
+            }
+
+            UpdateRouteState();
+            await LoadSidebarData();
+            StateHasChanged();
+        }
+    }
+
+    private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        UpdateRouteState();
+        await LoadSidebarData();
         StateHasChanged();
     }
+
+    private void UpdateRouteState()
+    {
+        var uri = NavigationManager.Uri.ToLower();
+        IsChatsPage = uri.Contains("/chats");
+        IsSettings = uri.Contains("/settings");
+
+        // Detect active conversation
+        if (IsChatsPage)
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(uri, @"/chats/([a-f0-9\\-]+)");
+            if (match.Success && Guid.TryParse(match.Groups[1].Value, out var convoId))
+            {
+                ActiveConversationId = convoId;
+            }
+            else
+            {
+                ActiveConversationId = null;
+            }
+            ActiveTroupeId = null;
+        }
+        else
+        {
+            var match = System.Text.RegularExpressions.Regex.Match(uri, @"/troupes/([a-f0-9\\-]+)");
+            if (match.Success && Guid.TryParse(match.Groups[1].Value, out var troupeId))
+            {
+                ActiveTroupeId = troupeId;
+            }
+            else
+            {
+                ActiveTroupeId = null;
+            }
+            ActiveConversationId = null;
+        }
+    }
+
+    private async Task LoadSidebarData()
+    {
+        try
+        {
+            if (IsChatsPage)
+            {
+                Conversations = await Http.GetFromJsonAsync<List<ConversationDto>>("/api/conversations/mine") ?? new();
+            }
+            else
+            {
+                Troupes = await Http.GetFromJsonAsync<List<TroupeDto>>("/api/membership/mine") ?? new();
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"❌ Sidebar data load failed: {ex.Message}");
+        }
+    }
+
+    private async void HandleTroupeJoined()
+    {
+        await LoadSidebarData();
+    }
+
+    private string GetAvatar(string? url) => string.IsNullOrWhiteSpace(url) ? "images/Profile.svg" : url;
+    private string TroupeAvatar(string? url) => string.IsNullOrWhiteSpace(url) ? "images/Troupe-chat.svg" : url;
 
     public void Dispose()
     {
         NavigationManager.LocationChanged -= OnLocationChanged;
+        SidebarUpdate.OnTroupeJoined -= HandleTroupeJoined;
+    }
+
+    public class ConversationDto
+    {
+        public Guid Id { get; set; }
+        public List<ParticipantDto> Participants { get; set; } = new();
+    }
+
+    public class ParticipantDto
+    {
+        public Guid UserId { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string AvatarUrl { get; set; } = string.Empty;
+    }
+
+    public class TroupeDto
+    {
+        public Guid Id { get; set; }
+        public string Name { get; set; } = string.Empty;
+        public string AvatarUrl { get; set; } = string.Empty;
     }
 }

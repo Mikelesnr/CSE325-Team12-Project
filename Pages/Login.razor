@@ -85,7 +85,7 @@
         {
             successMessage = $"Welcome back, {Auth.CurrentUser?.Name}!";
             await Task.Delay(1000);
-            Navigation.NavigateTo("/");
+            Navigation.NavigateTo("/chats");
         }
         else
         {
