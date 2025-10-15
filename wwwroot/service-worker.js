@@ -6,7 +6,7 @@ const ASSETS_TO_CACHE = [
   "/favicon.ico",
   "/manifest.json",
   "/web-app-manifest-192x192.png",
-  "/web-app-manifest-512x512.png"
+  "/web-app-manifest-512x512.png",
 ];
 
 // Install and pre-cache static assets
@@ -36,19 +36,32 @@ self.addEventListener("activate", (event) => {
   );
 });
 
-// Serve cached assets when offline
+// Serve cached assets when offline, with error handling
 self.addEventListener("fetch", (event) => {
   const requestUrl = new URL(event.request.url);
 
   // Don’t interfere with Blazor’s SignalR connection
   if (requestUrl.pathname.startsWith("/_blazor")) {
-    return; // Let Blazor Server handle this
+    return;
   }
 
-  // Cache-first strategy for static files
   event.respondWith(
     caches.match(event.request).then((response) => {
-      return response || fetch(event.request);
+      return (
+        response ||
+        fetch(event.request).catch((error) => {
+          console.error(
+            "[Service Worker] Fetch failed:",
+            event.request.url,
+            error
+          );
+          return new Response("Offline or fetch failed", {
+            status: 503,
+            statusText: "Service Unavailable",
+            headers: { "Content-Type": "text/plain" },
+          });
+        })
+      );
     })
   );
 });
